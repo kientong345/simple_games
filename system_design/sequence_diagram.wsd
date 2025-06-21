@@ -1,0 +1,110 @@
+@startuml caro_server_main_sequence
+
+actor Players
+participant PlayerManager
+participant ServerMain
+participant RoomManager
+participant GameRoom
+
+activate ServerMain
+
+ServerMain -> ServerMain: init()
+ServerMain -> PlayerManager: <<create>>
+ServerMain -> RoomManager: <<create>>
+
+loop
+    ServerMain -> ServerMain: listening()
+    Players -> ServerMain: player_incoming
+    ServerMain -> ServerMain: set_player_callback(func)
+    ServerMain -> PlayerManager: add_player(player_stream)
+    activate PlayerManager
+    PlayerManager -> PlayerManager: add_player(player_stream)
+    PlayerManager --> ServerMain: pid
+    deactivate PlayerManager
+
+    par
+        Players -> PlayerManager: request_new_room
+        activate PlayerManager
+        PlayerManager -> ServerMain: notify(command)
+        deactivate PlayerManager
+        ServerMain -> ServerMain: command_callback(command)
+        ServerMain -> RoomManager: create_new_room
+        activate RoomManager
+        RoomManager -> RoomManager: create_room(rid)
+        participant GameRoom
+        RoomManager -> GameRoom: <<create>>
+        RoomManager --> ServerMain: rid + room_context
+        deactivate RoomManager
+        ServerMain -> PlayerManager: rid + room_context
+        activate PlayerManager
+        PlayerManager -> Players: rid + room_context
+        deactivate PlayerManager
+
+        Players -> PlayerManager: join_room(rid)
+        activate PlayerManager
+        PlayerManager -> ServerMain: notify(command)
+        deactivate PlayerManager
+        ServerMain -> ServerMain: command_callback(command)
+        ServerMain -> RoomManager: add_player_to_room(rid, player_stream)
+        activate RoomManager
+        RoomManager -> RoomManager: add_player_to_room(rid, player_stream)
+        RoomManager --> ServerMain: join_result(Success)
+        deactivate RoomManager
+        ServerMain -> PlayerManager: join_result(Success)
+        activate PlayerManager
+        PlayerManager -> Players: join_result(Success)
+        deactivate PlayerManager
+
+        Players -> Players: wait_room_full()
+
+        ServerMain -> RoomManager: check_room_full(rid)
+        activate RoomManager
+        RoomManager -> RoomManager: check_full(rid)
+        RoomManager --> ServerMain: check_result(Success)
+        deactivate RoomManager
+
+        opt room_full
+            ServerMain -> PlayerManager: room_context(rid)
+            activate PlayerManager
+            PlayerManager -> Players: room_context(rid)
+            deactivate PlayerManager
+
+            ServerMain -> RoomManager: get_room(rid)
+            activate RoomManager
+            RoomManager -> RoomManager: get_room(rid)
+            RoomManager --> ServerMain: GameRoom
+            deactivate RoomManager
+
+            ServerMain -> GameRoom: try_start()
+
+            par
+                activate GameRoom
+                GameRoom -> GameRoom: override_player_callback(func)
+                Players -> PlayerManager: move()
+                activate PlayerManager
+                PlayerManager -> GameRoom: notify(command)
+                deactivate PlayerManager
+                GameRoom -> GameRoom: callback_handle_move(command)
+                GameRoom -> PlayerManager: room_context
+                activate PlayerManager
+                PlayerManager -> Players: room_context
+                deactivate PlayerManager
+                GameRoom -> GameRoom: check_game_over()
+
+                opt game_over
+                    GameRoom -> GameRoom: stop()
+                    GameRoom -> GameRoom: return_prev_player_callback(func)
+                end opt
+
+                deactivate GameRoom
+            end par
+
+        end opt
+
+    end par
+
+end loop
+
+deactivate ServerMain
+
+@enduml

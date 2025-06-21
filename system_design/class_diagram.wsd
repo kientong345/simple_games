@@ -1,0 +1,70 @@
+@startuml
+
+class IdPool {
+    - id_set: BTreeSet<i32>
+
+    + alloc_id() -> i32
+    + dealloc_id(id: i32)
+}
+
+class PlayerStream {
+    + pid: i32
+    + stream: TcpStream
+}
+
+class PlayerStreamManager {
+    - player_streams: HashMap<i32, PlayerStream>
+    - pid_pool: IdPool<i32>
+    - max_players: usize
+
+    + new(max_players: usize, pid_pool: IdPool<i32>) -> Self
+}
+
+interface PlayerOperations {
+    + add_player(&mut self, player: PlayerOrder) -> i32
+    + remove_player(&mut self, pid: i32)
+    + set_action_on_request(&mut self, pid: i32, func: Fn)
+    + get_action_on_request(&self, pid: i32) -> Option<Fn>
+    + response(&mut self, pid: i32, message: MessagePacket)
+    + check_alive(&self, pid: i32) -> bool
+}
+
+PlayerStreamManager ..> IdPool
+PlayerStreamManager *-- PlayerStream
+PlayerStreamManager ..|> PlayerOperations
+
+class GameOperations {
+    - player_ops: Arc<Mutex<PlayerOperations>>>
+
+    + execute_command(&mut self, command: GameCommand) -> Result<(), &str>
+}
+
+class GameRoom {
+    - rid: i32
+    - player1_id: Option<i32>
+    - player2_id: Option<i32>
+    - game_ops: GameOperations
+
+    + new(id: i32) -> Self
+    + id(&self) -> i32
+    + game_context(&self) -> Rc<RefCell<Option<game_context::GameContext>>>
+    + is_full(&self) -> bool
+    + add_player(&mut self, player: PlayerOrder)
+    + remove_player(&mut self, player: PlayerOrder)
+}
+
+class RoomManager {
+    - rooms_set: HashMap<i32, GameRoom>
+    - max_rooms: usize
+
+    + new(max_rooms: usize) -> Self
+    + create_new_room(&mut self, id: i32) -> Result<i32, &str>
+    + delete_room(&mut self, id: i32) -> Result<i32, &str>
+    + get_room(&self, id: i32) -> Option<&GameRoom>
+    + id_exist(&self, id: i32) -> bool
+}
+
+RoomManager *-- GameRoom
+GameRoom ..> PlayerOperations
+
+@enduml
