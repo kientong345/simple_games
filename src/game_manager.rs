@@ -8,6 +8,14 @@ use crate::{
     room_manager,
 };
 
+pub enum OperationResult {
+    Successfully(simple_caro::GameState),
+    RoomNotExist,
+    RoomNotFullYet,
+    Player1Left,
+    Player2Left,
+}
+
 #[derive(Debug, Clone)]
 struct GameContext {
     board: Rc<RefCell<Vec<Vec<simple_caro::TileState>>>>,
@@ -47,12 +55,15 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
         }
     }
 
-    pub fn try_operate_in_room(&mut self, rid: i32) -> bool {
+    pub fn try_operate_in_room(&mut self, rid: i32) -> OperationResult {
         // this function should run asynchronously btw
 
-        if !self.room_manager.lock().unwrap().room_exist(rid) ||
-           !self.room_manager.lock().unwrap().room_full(rid) {
-            return false;
+        if !self.room_manager.lock().unwrap().room_exist(rid) {
+            return OperationResult::RoomNotExist;
+        }
+
+        if !self.room_manager.lock().unwrap().room_full(rid) {
+            return OperationResult::RoomNotFullYet;
         }
 
         // override player's callbacks
@@ -102,6 +113,8 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
         // logic goes here
 
 
+        let game_result = self.game.get_state();
+
         self.game.stop();
 
         // unset player's states
@@ -128,7 +141,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
         // self.player_manager.lock().unwrap().set_action_on_request(self.player1_id, prev_callback1.unwrap());
         // self.player_manager.lock().unwrap().set_action_on_request(self.player2_id, prev_callback2.unwrap());
 
-        true
+        OperationResult::Successfully(game_result)
     }
 
     pub fn get_state(&self) -> simple_caro::GameState {

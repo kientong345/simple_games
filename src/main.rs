@@ -51,8 +51,22 @@ fn main() {
             }
             if room_manager_clone.lock().unwrap().room_full(room_id) {
                 let mut game_operator = game_manager::GameOperator::new(player_manager_clone.clone(), room_manager_clone.clone());
-                while !game_operator.try_operate_in_room(room_id) {
-                    // player_manager_clone.lock().unwrap().response(new_pid, "Failed to start game".to_string());
+                match game_operator.try_operate_in_room(room_id) {
+                    game_manager::OperationResult::RoomNotExist => {
+                        todo!()
+                    },
+                    game_manager::OperationResult::RoomNotFullYet => {
+                        todo!()
+                    },
+                    game_manager::OperationResult::Player1Left => {
+                        todo!()
+                    },
+                    game_manager::OperationResult::Player2Left => {
+                        todo!()
+                    },
+                    game_manager::OperationResult::Successfully(result) => {
+                        todo!()
+                    },
                 }
                 // player_manager_clone.lock().unwrap().response(pid1, start_game_message);
                 // player_manager_clone.lock().unwrap().response(pid2, start_game_message);
