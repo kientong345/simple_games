@@ -1,6 +1,18 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::Mutex;
+use tokio::net::{TcpListener, TcpStream};
+use futures::future::BoxFuture;
 
-type Callback = Arc<Mutex<dyn FnMut(MessagePacket)>>;
+
+pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(MessagePacket) -> BoxFuture<'static, ()> + Send + 'static>>;
+
+#[macro_export]
+macro_rules! make_action {
+    ($action:expr) => {
+        Arc::new(tokio::sync::Mutex::new($action)) as crate::communication::HandleAction
+    };
+}
 
 pub const SERVER_ADDRESS: &'static str = "127.0.0.1:12225";
 
@@ -33,8 +45,9 @@ pub enum ServerResponse {
 
 }
 
+#[derive(Debug, Clone)]
 pub struct MessagePacket {
-
+    raw_data: Vec<u8>,
 }
 
 impl<'a> MessagePacket {
@@ -42,8 +55,8 @@ impl<'a> MessagePacket {
         todo!()
     }
 
-    pub fn to_serial(self) -> &'a [u8] {
-        todo!()
+    pub fn to_serial(self) -> Vec<u8> {
+        self.raw_data
     }
 }
 
@@ -53,91 +66,93 @@ pub trait ToMessagePacket {
 
 impl ToMessagePacket for &[u8] {
     fn to_message_packet(self) -> MessagePacket {
-        todo!()
+        MessagePacket {
+            raw_data: self.to_vec(),
+        }
     }
 }
 
 pub struct Stream {
+    stream: TcpStream,
+    buffer: [u8; 1024],
+}
 
+impl Stream {
+    fn new(stream: TcpStream) -> Self {
+        Self {
+            stream,
+            buffer: [0; 1024],
+        }
+    }
+
+    async fn receive(&mut self) -> (Vec<u8>, usize) {
+        let bytesread = self.stream.read(&mut self.buffer).await.unwrap();
+        (self.buffer[..bytesread].to_vec(), bytesread)
+    }
+
+    async fn send(&mut self, message: Vec<u8>) {
+        self.stream.write_all(&message).await.unwrap();
+        self.stream.flush().await.unwrap();
+    }
 }
 
 pub struct Listener {
-    
+    listener: TcpListener,
 }
 
 impl Listener {
-    pub fn new(addr: &str) -> Self {
-        todo!()
+    pub async fn new(addr: &str) -> Self {
+        Self {
+            listener: TcpListener::bind(addr).await.unwrap(),
+        }
     }
-    pub fn accept(&self) -> Result<Stream, &str> {
-        todo!()
+
+    pub async fn accept(&mut self) -> Stream {
+        let (stream, _addr) = self.listener.accept().await.unwrap();
+        Stream::new(stream)
     }
 }
 
-pub struct Communicator {
+pub struct ClientHandler {
     stream: Arc<Mutex<Stream>>,
-    callback: Arc<Mutex<Option<Callback>>>,
+    action: HandleAction,
 }
 
-impl Communicator {
-    pub fn new(stream: Stream) -> Arc<Mutex<Self>> {
-        let itself = Arc::new(Mutex::new(Self {
+impl ClientHandler {
+    pub fn new(stream: Stream) -> Self {
+        let action = make_action!(|_msg: MessagePacket| {
+            let future = async move {
+            };
+            Box::pin(future) as BoxFuture<'static, ()>
+        });
+        Self {
             stream: Arc::new(Mutex::new(stream)),
-            callback: Arc::new(Mutex::new(None)),
-        }));
-
-        // Self::spawn_handler(itself.clone());
-
-        itself
+            action,
+        }
     }
 
-    pub fn spawn_handler(handler: Arc<Self>) {
-        // tokio::task::spawn(async move {
-        //     let mut buf = [0u8; 1024];
-
-        //     loop {
-        //         let n = {
-        //             let mut stream_guard = handler.stream.lock().unwrap();
-        //             match stream_guard.read(&mut buf).await {
-        //                 Ok(0) => {
-        //                     println!("Connection closed");
-        //                     break;
-        //                 }
-        //                 Ok(n) => n,
-        //                 Err(e) => {
-        //                     eprintln!("Read error: {:?}", e);
-        //                     break;
-        //                 }
-        //             }
-        //         };
-
-        //         let data = buf[..n].to_message_packet();
-
-        //         // Call the callback if present
-        //         if let Some(cb) = &*handler.callback.lock().unwrap() {
-        //             (cb.lock().unwrap())(data);
-        //         }
-        //     }
-        // });
+    pub async fn handling_request(target: Arc<Mutex<ClientHandler>>) {
+        loop {
+            let target_clone = target.clone();
+            let (msg, bytesread) = target_clone.lock().await.stream.lock().await.receive().await;
+            let msg = msg.to_message_packet();
+            if bytesread == 0 {
+                break;
+            }
+            tokio::spawn(target_clone.lock().await.action.lock().await(msg));
+        }
     }
 
-    pub fn set_action_on_request<F>(&mut self, action: F)
-    where
-        F: FnMut(MessagePacket) + 'static,
-    {
-        let mut callback = self.callback.lock().unwrap();
-        *callback = Some(Arc::new(Mutex::new(action)));
+    pub async fn set_action_on_request(&mut self, action: HandleAction) {
+        self.action = action;
     }
 
-    pub fn get_action_on_request(&self) -> Option<Callback> {
-        let callback = self.callback.lock().unwrap();
-        callback.clone()
+    pub async fn get_action_on_request(&self) -> HandleAction {
+        self.action.clone()
     }
 
-    pub fn response(&self, message: MessagePacket) {
-        // Here you would typically write the message back to the stream
-        // For example:
-        // self.stream.write_all(&message.to_bytes()).unwrap();
+    pub async fn response(&mut self, message: MessagePacket) {
+        self.stream.lock().await.send(message.to_serial()).await;
     }
 
     pub fn check_alive(&self) -> bool {

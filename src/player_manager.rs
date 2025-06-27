@@ -1,8 +1,8 @@
-use std::{collections::HashMap, sync::{Arc, Mutex}};
+use std::{collections::HashMap, sync::Arc};
+use tokio::{sync::Mutex, task::JoinHandle};
 
 use crate::{
-    id_pool,
-    communication
+    communication::{self, HandleAction}, id_pool
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -21,15 +21,20 @@ pub enum PlayerState {
 struct Player {
     pid: i32,
     state: PlayerState,
-    communicator: Arc<Mutex<communication::Communicator>>,
+    handler: Arc<Mutex<communication::ClientHandler>>,
+    joinhandler: JoinHandle<()>,
 }
 
 impl Player {
-    fn new(pid: i32, stream: communication::Stream) -> Self {
+    async fn new(pid: i32, stream: communication::Stream) -> Self {
+        let handler = Arc::new(Mutex::new(communication::ClientHandler::new(stream)));
+        let handler_clone = handler.clone();
+        let joinhandler = tokio::spawn(communication::ClientHandler::handling_request(handler_clone));
         Self {
             pid,
             state: PlayerState::Logged(ConnectState::Connected),
-            communicator: communication::Communicator::new(stream),
+            handler,
+            joinhandler,
         }
     }
 
@@ -45,22 +50,16 @@ impl Player {
         self.state
     }
 
-    fn set_action_on_request<F>(&mut self, action: F)
-    where
-        F: FnMut(communication::MessagePacket) + 'static,
-    {
-        self.communicator.lock().unwrap().set_action_on_request(action);
+    async fn set_action_on_request(&mut self, action: HandleAction) {
+        self.handler.lock().await.set_action_on_request(action).await;
     }
 
-    fn get_action_on_request(&self) -> Option<&Box<dyn FnMut(communication::MessagePacket)>> {
-        // self.action_on_request.as_ref()
-        todo!()
+    async fn get_action_on_request(&self) -> HandleAction {
+        self.handler.lock().await.get_action_on_request().await
     }
 
-    fn response(&self, message: communication::MessagePacket) {
-        // Here you would typically write the message back to the stream
-        // For example:
-        // self.stream.write_all(&message.to_bytes()).unwrap();
+    async fn response(&self, message: communication::MessagePacket) {
+        self.handler.lock().await.response(message).await;
     }
 
     fn check_alive(&self) -> bool {
@@ -72,13 +71,13 @@ impl Player {
 }
 
 pub trait PlayerManager {
-    fn add_player(&mut self, stream: communication::Stream) -> i32;
+    async fn add_player(&mut self, stream: communication::Stream) -> i32;
     fn remove_player(&mut self, pid: i32);
     fn set_player_state(&mut self, pid: i32, state: PlayerState);
     fn get_player_state(&self, pid: i32) -> Option<PlayerState>;
-    fn set_action_on_request<F: FnMut(communication::MessagePacket) + 'static>(&mut self, pid: i32, action: F);
-    fn get_action_on_request(&self, pid: i32) -> Option<&Box<dyn FnMut(communication::MessagePacket)>>;
-    fn response(&self, pid: i32, message: communication::MessagePacket);
+    async fn set_action_on_request(&mut self, pid: i32, action: HandleAction);
+    async fn get_action_on_request(&self, pid: i32) -> HandleAction;
+    async fn response(&self, pid: i32, message: communication::MessagePacket);
     fn check_alive(&self, pid: i32) -> bool;
     fn player_exist(&self, pid: i32) -> bool;
 }
@@ -100,12 +99,12 @@ impl PlayerContainer {
 }
 
 impl PlayerManager for PlayerContainer {
-    fn add_player(&mut self, stream: communication::Stream) -> i32 {
+    async fn add_player(&mut self, stream: communication::Stream) -> i32 {
         if self.players_map.len() >= self.max_player {
             return -1;
         }
         let pid = self.pid_pool.alloc_id();
-        let new_player = Player::new(pid, stream);
+        let new_player = Player::new(pid, stream).await;
         self.players_map.insert(pid, new_player);
         pid
     }
@@ -125,19 +124,20 @@ impl PlayerManager for PlayerContainer {
         self.players_map.get(&pid).map(|p| p.get_state())
     }
 
-    fn set_action_on_request<F: FnMut(communication::MessagePacket) + 'static>(&mut self, pid: i32, action: F) {
+    async fn set_action_on_request(&mut self, pid: i32, action: HandleAction) {
         if let Some(player) = self.players_map.get_mut(&pid) {
-            player.set_action_on_request(action);
+            player.set_action_on_request(action).await;
         }
     }
 
-    fn get_action_on_request(&self, pid: i32) -> Option<&Box<dyn FnMut(communication::MessagePacket)>> {
-        self.players_map.get(&pid).and_then(|p| p.get_action_on_request())
+    async fn get_action_on_request(&self, pid: i32) -> HandleAction {
+        // self.players_map.get(&pid).and_then(|p| p.get_action_on_request().await).unwrap()
+        todo!()
     }
 
-    fn response(&self, pid: i32, message: communication::MessagePacket) {
+    async fn response(&self, pid: i32, message: communication::MessagePacket) {
         if let Some(player) = self.players_map.get(&pid) {
-            player.response(message);
+            player.response(message).await;
         }
     }
 
