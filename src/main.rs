@@ -30,18 +30,23 @@ async fn main() {
         //     todo!()
         // });
 
+        let player_manager_clone = player_manager.clone();
+        let room_manager_clone = room_manager.clone();
 
         player_manager.lock().await.set_action_on_request(
             new_pid,
-            make_action!(|msg: communication::MessagePacket| {
-            let future = async move {
-                // println!("{:?}", msg.command());
-                // println!("{:?}", msg.to_serial());
-                // let room_id = handle_room_request(player_manager.clone(), room_manager.clone(), new_pid, msg).await;
-                // run_a_game(player_manager.clone(), room_manager.clone(), room_id).await;
-            };
-            Box::pin(future) as futures::future::BoxFuture<'static, ()>
-        })).await;
+            make_action!(move |msg: communication::MessagePacket| {
+                let player_manager = player_manager_clone.clone();
+                let room_manager = room_manager_clone.clone();
+                let future = async move {
+                    // println!("{:?}", msg.command());
+                    // println!("{:?}", msg.to_serial());
+                    let room_id = handle_room_request(player_manager.clone(), room_manager.clone(), new_pid, msg).await;
+                    run_a_game(player_manager.clone(), room_manager.clone(), room_id).await;
+                };
+                Box::pin(future) as futures::future::BoxFuture<'static, ()>
+            }
+        )).await;
     }
 }
 

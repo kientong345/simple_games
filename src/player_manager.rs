@@ -70,6 +70,12 @@ impl Player {
     }
 }
 
+impl Drop for Player {
+    fn drop(&mut self) {
+        self.joinhandler.abort();
+    }
+}
+
 pub trait PlayerManager {
     async fn add_player(&mut self, stream: communication::Stream) -> i32;
     fn remove_player(&mut self, pid: i32);
@@ -131,8 +137,7 @@ impl PlayerManager for PlayerContainer {
     }
 
     async fn get_action_on_request(&self, pid: i32) -> HandleAction {
-        // self.players_map.get(&pid).and_then(|p| p.get_action_on_request().await).unwrap()
-        todo!()
+        self.players_map.get(&pid).unwrap().get_action_on_request().await
     }
 
     async fn response(&self, pid: i32, message: communication::MessagePacket) {
