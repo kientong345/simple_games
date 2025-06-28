@@ -1,10 +1,11 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::sync::mpsc;
 
 pub mod simple_caro;
 
 use crate::{
-    player_manager, caro_protocol::{self, GenericCode, ToMessagePacket}, room_manager
+    caro_protocol, make_action, player_manager, room_manager
 };
 
 pub enum OperationResult {
@@ -47,12 +48,6 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
             return OperationResult::RoomNotFullYet;
         }
 
-        // override player's callbacks
-        // let prev_callback1 = self.player_manager.lock().await.get_action_on_request(self.player1_id);
-        // let prev_callback2 = self.player_manager.lock().await.get_action_on_request(self.player2_id);
-        // self.player_manager.lock().await.set_action_on_request(self.player1_id, |msg| {});
-        // self.player_manager.lock().await.set_action_on_request(self.player2_id, |msg| {});
-
         // set rule
         match self.room_manager.lock().await.get_rule_in_room(rid).unwrap() {
             caro_protocol::GameRule::TicTacToe => {
@@ -90,11 +85,58 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
 
         self.game.start(simple_caro::GameState::Player1Turn);
 
+        // override player's callbacks
+        let player_manager_clone = self.player_manager.clone();
+        let prev_callback1 = player_manager_clone.lock().await.get_action_on_request(self.player1_id).await;
+        let prev_callback2 = player_manager_clone.lock().await.get_action_on_request(self.player2_id).await;
 
-        // logic goes here
+        let (tx, mut rx) = mpsc::channel::<caro_protocol::PlayerCode>(2);
 
+        let tx_clone = tx.clone();
+
+        self.player_manager.lock().await.set_action_on_request(
+            self.player1_id,
+            make_action!(move |msg: caro_protocol::MessagePacket| {
+                let tx_clone = tx_clone.clone();
+                let future = async move {
+                    if let caro_protocol::GenericCode::Player(code) = msg.code() {
+                        tx_clone.send(code).await.unwrap();
+                    }
+                };
+                Box::pin(future) as futures::future::BoxFuture<'static, ()>
+            })
+        ).await;
+
+        self.player_manager.lock().await.set_action_on_request(
+            self.player2_id,
+            make_action!(move |msg: caro_protocol::MessagePacket| {
+                let tx_clone = tx.clone();
+                let future = async move {
+                    if let caro_protocol::GenericCode::Player(code) = msg.code() {
+                        tx_clone.send(code).await.unwrap();
+                    }
+                };
+                Box::pin(future) as futures::future::BoxFuture<'static, ()>
+            })
+        ).await;
+
+        self.response_context().await;
+
+        loop {
+            if let Some(code) = rx.recv().await {
+                if !self.execute_player_command(code).await {
+                    break;
+                }
+            }
+        }
 
         let game_result = self.game.get_state();
+
+        self.response_context().await;
+
+        // return player's callbacks
+        self.player_manager.lock().await.set_action_on_request(self.player1_id, prev_callback1).await;
+        self.player_manager.lock().await.set_action_on_request(self.player2_id, prev_callback2).await;
 
         self.game.stop();
 
@@ -118,10 +160,6 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
         // unset rule
         self.game.unset_rule();
 
-        // return player's callbacks
-        // self.player_manager.lock().await.set_action_on_request(self.player1_id, prev_callback1.unwrap());
-        // self.player_manager.lock().await.set_action_on_request(self.player2_id, prev_callback2.unwrap());
-
         OperationResult::Successfully(game_result)
     }
 
@@ -133,7 +171,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
         self.game.is_over()
     }
 
-    pub async fn execute_player_command(&mut self, cmd_code: caro_protocol::PlayerCode) {
+    pub async fn execute_player_command(&mut self, cmd_code: caro_protocol::PlayerCode) -> bool {
         match cmd_code {
             caro_protocol::PlayerCode::Player1Move(x, y) => {
                 let pos = simple_caro::Coordinate {x, y};
@@ -206,16 +244,19 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                 self.response_context().await;
             }
             caro_protocol::PlayerCode::Player1Leave => {
-                self.game.stop();
-                self.response_context().await;
+                return false;
             }
             caro_protocol::PlayerCode::Player2Leave => {
-                self.game.stop();
-                self.response_context().await;
+                return false;
             }
-            _ => {
+            caro_protocol::PlayerCode::RequestRoomAsPlayer1(_game_rule) => {
+                // do not process this request
+            }
+            caro_protocol::PlayerCode::JoinRoomAsPlayer2(_rid) => {
+                // do not process this request
             }
         }
+        !self.game.is_over()
     }
 
     async fn response_context(&mut self) {
