@@ -4,9 +4,9 @@ use tokio::sync::Mutex;
 use tokio::net::{TcpListener, TcpStream};
 use futures::future::BoxFuture;
 
-use crate::protocol::{self, ToMessagePacket};
+use crate::caro_protocol::{self, ToMessagePacket};
 
-pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(protocol::MessagePacket) -> BoxFuture<'static, ()> + Send + 'static>>;
+pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(caro_protocol::MessagePacket) -> BoxFuture<'static, ()> + Send + 'static>>;
 
 #[macro_export]
 macro_rules! make_action {
@@ -65,7 +65,7 @@ pub struct ClientHandler {
 
 impl ClientHandler {
     pub fn new(stream: Stream) -> Self {
-        let action = make_action!(|_msg: protocol::MessagePacket| {
+        let action = make_action!(|_msg: caro_protocol::MessagePacket| {
             let future = async move {
             };
             Box::pin(future) as BoxFuture<'static, ()>
@@ -96,7 +96,7 @@ impl ClientHandler {
         self.action.clone()
     }
 
-    pub async fn response(&mut self, message: protocol::MessagePacket) {
+    pub async fn response(&mut self, message: caro_protocol::MessagePacket) {
         self.stream.lock().await.send(message.to_serial()).await;
     }
 

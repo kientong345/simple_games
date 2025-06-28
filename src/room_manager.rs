@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    id_pool::IdPool, protocol
+    id_pool::IdPool, caro_protocol
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -21,11 +21,11 @@ struct GameRoom {
     rid: i32,
     player1_id: i32,
     player2_id: i32,
-    rule: protocol::GameRule,
+    rule: caro_protocol::GameRule,
 }
 
 impl GameRoom {
-    fn new(rid: i32, rule: protocol::GameRule) -> Self {
+    fn new(rid: i32, rule: caro_protocol::GameRule) -> Self {
         Self {
             rid,
             player1_id: -1,
@@ -60,18 +60,18 @@ impl GameRoom {
         (self.player1_id, self.player2_id)
     }
 
-    fn get_rule(&self) -> protocol::GameRule {
+    fn get_rule(&self) -> caro_protocol::GameRule {
         self.rule
     }
 }
 
 pub trait RoomManager {
-    fn add_room(&mut self, rule: protocol::GameRule) -> i32;
+    fn add_room(&mut self, rule: caro_protocol::GameRule) -> i32;
     fn remove_room(&mut self, rid: i32);
     fn add_player_to_room(&mut self, rid: i32, player: PlayerOrder) -> bool;
     fn remove_player_from_room(&mut self, rid: i32, player: PlayerOrder) -> bool;
     fn get_pids_in_room(&self, rid: i32) -> Option<(i32, i32)>;
-    fn get_rule_in_room(&self, rid: i32) -> Option<protocol::GameRule>;
+    fn get_rule_in_room(&self, rid: i32) -> Option<caro_protocol::GameRule>;
     fn room_full(&self, rid: i32) -> bool;
     fn room_exist(&self, rid: i32) -> bool;
 }
@@ -93,7 +93,7 @@ impl RoomContainer {
 }
 
 impl RoomManager for RoomContainer {
-    fn add_room(&mut self, rule: protocol::GameRule) -> i32 {
+    fn add_room(&mut self, rule: caro_protocol::GameRule) -> i32 {
         if self.rooms_set.len() >= self.max_rooms {
             return -1;
         }
@@ -134,7 +134,7 @@ impl RoomManager for RoomContainer {
         }
     }
 
-    fn get_rule_in_room(&self, rid: i32) -> Option<protocol::GameRule> {
+    fn get_rule_in_room(&self, rid: i32) -> Option<caro_protocol::GameRule> {
         if let Some(room) = self.rooms_set.get(&rid) {
             Some(room.get_rule())
         } else {

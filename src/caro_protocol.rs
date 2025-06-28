@@ -1,19 +1,20 @@
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum GameRule {
     TicTacToe,
     FourBlockOne,
     FiveBlockTwo,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum TileState {
     Empty,
     Player1,
     Player2,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum GameState {
     Player1Turn,
     Player2Turn,
@@ -23,26 +24,26 @@ pub enum GameState {
     NotInprogress,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ConnectState {
     Connected,
     Disconnected,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayerState {
     Logged(ConnectState),
     Waiting(ConnectState),
     InGame(ConnectState),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Coordinate {
     pub x: i64,
     pub y: i64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameContext {
     pub board: Vec<Vec<TileState>>,
     pub player1_move_history: Vec<Coordinate>,
@@ -54,7 +55,7 @@ pub struct GameContext {
     pub player2_state: PlayerState,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayerCode {
     // pregame
     RequestRoomAsPlayer1(GameRule),
@@ -72,7 +73,7 @@ pub enum PlayerCode {
     Player2Leave,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerCode {
     // pregame
     JoinedRoomAsPlayer1(i32),
@@ -85,13 +86,13 @@ pub enum ServerCode {
     Context(GameContext),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GenericCode {
     Player(PlayerCode),
     Server(ServerCode),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessagePacket {
     code: GenericCode,
 }
@@ -114,8 +115,8 @@ impl<'a> MessagePacket {
     }
 
     pub fn to_serial(self) -> Vec<u8> {
-        // self.code
-        todo!()
+        let json_str = serde_json::to_string(&self.code).unwrap();
+        json_str.as_bytes().to_vec()
     }
 }
 
@@ -125,9 +126,15 @@ pub trait ToMessagePacket {
 
 impl ToMessagePacket for &[u8] {
     fn to_message_packet(self) -> MessagePacket {
-        // MessagePacket {
-        //     raw_data: self.to_vec(),
-        // }
-        todo!()
+        let json_str = String::from_utf8_lossy(self);
+        let code: GenericCode = serde_json::from_str(&json_str).unwrap();
+        match code {
+            GenericCode::Server(server_code) => {
+                MessagePacket::new_server_packet(server_code)
+            },
+            GenericCode::Player(player_code) => {
+                MessagePacket::new_player_packet(player_code)
+            },
+        }
     }
 }

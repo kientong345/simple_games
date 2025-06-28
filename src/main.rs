@@ -2,7 +2,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use simple_caro_app::{
-    client_handler, game_manager, id_pool, make_action, player_manager::{self, PlayerManager}, protocol, room_manager::{self, RoomManager}
+    client_handler, game_manager, id_pool, make_action, player_manager::{self, PlayerManager}, caro_protocol, room_manager::{self, RoomManager}
 };
 
 #[tokio::main]
@@ -30,7 +30,7 @@ async fn main() {
 
         player_manager.lock().await.set_action_on_request(
             new_pid,
-            make_action!(move |msg: protocol::MessagePacket| {
+            make_action!(move |msg: caro_protocol::MessagePacket| {
                 let player_manager = player_manager_clone.clone();
                 let room_manager = room_manager_clone.clone();
                 let future = async move {
@@ -46,19 +46,19 @@ async fn main() {
 }
 
 async fn handle_room_request(player_manager: Arc<Mutex<player_manager::PlayerContainer>>, room_manager: Arc<Mutex<room_manager::RoomContainer>>,
-                            pid: i32, message: protocol::MessagePacket) -> i32 {
+                            pid: i32, message: caro_protocol::MessagePacket) -> i32 {
     let mut room_id = -1;
 
-    if let protocol::GenericCode::Player(player_code) = message.code() {
+    if let caro_protocol::GenericCode::Player(player_code) = message.code() {
         match player_code {
-            protocol::PlayerCode::RequestRoomAsPlayer1(rule_type) => {
+            caro_protocol::PlayerCode::RequestRoomAsPlayer1(rule_type) => {
                 let new_rid = room_manager.lock().await.add_room(rule_type);
                 let _result = room_manager.lock().await.add_player_to_room(new_rid, room_manager::PlayerOrder::Player2(pid));
                 player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
                 // player_manager_clone.lock().await.response(new_pid, new_rid);
                 room_id = new_rid;
             },
-            protocol::PlayerCode::JoinRoomAsPlayer2(rid) => {
+            caro_protocol::PlayerCode::JoinRoomAsPlayer2(rid) => {
                 let _result = room_manager.lock().await.add_player_to_room(rid, room_manager::PlayerOrder::Player2(pid));
                 player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
                 // player_manager_clone.lock().unwrap().response(new_pid, result);

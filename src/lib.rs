@@ -4,4 +4,4 @@ pub mod id_pool;
 pub mod player_tracker;
 pub mod client_handler;
 pub mod game_manager;
-pub mod protocol;
+pub mod caro_protocol;

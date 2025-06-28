@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::Mutex, task::JoinHandle};
 
 use crate::{
-    client_handler::{self, HandleAction}, id_pool, protocol
+    client_handler::{self, HandleAction}, id_pool, caro_protocol
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -58,7 +58,7 @@ impl Player {
         self.handler.lock().await.get_action_on_request().await
     }
 
-    async fn response(&self, message: protocol::MessagePacket) {
+    async fn response(&self, message: caro_protocol::MessagePacket) {
         self.handler.lock().await.response(message).await;
     }
 
@@ -83,7 +83,7 @@ pub trait PlayerManager {
     fn get_player_state(&self, pid: i32) -> Option<PlayerState>;
     async fn set_action_on_request(&mut self, pid: i32, action: HandleAction);
     async fn get_action_on_request(&self, pid: i32) -> HandleAction;
-    async fn response(&self, pid: i32, message: protocol::MessagePacket);
+    async fn response(&self, pid: i32, message: caro_protocol::MessagePacket);
     fn check_alive(&self, pid: i32) -> bool;
     fn player_exist(&self, pid: i32) -> bool;
 }
@@ -140,7 +140,7 @@ impl PlayerManager for PlayerContainer {
         self.players_map.get(&pid).unwrap().get_action_on_request().await
     }
 
-    async fn response(&self, pid: i32, message: protocol::MessagePacket) {
+    async fn response(&self, pid: i32, message: caro_protocol::MessagePacket) {
         if let Some(player) = self.players_map.get(&pid) {
             player.response(message).await;
         }
