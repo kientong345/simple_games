@@ -4,9 +4,7 @@ use tokio::sync::Mutex;
 pub mod simple_caro;
 
 use crate::{
-    communication::{self, ToMessagePacket},
-    player_manager,
-    room_manager,
+    player_manager, protocol::{self, GenericCode, ToMessagePacket}, room_manager
 };
 
 pub enum OperationResult {
@@ -15,24 +13,6 @@ pub enum OperationResult {
     RoomNotFullYet,
     Player1Left,
     Player2Left,
-}
-
-#[derive(Debug, Clone)]
-struct GameContext {
-    board: Rc<RefCell<Vec<Vec<simple_caro::TileState>>>>,
-    player1_move_history: Vec<simple_caro::Coordinate>,
-    player2_move_history: Vec<simple_caro::Coordinate>,
-    player1_undone_moves: Vec<simple_caro::Coordinate>,
-    player2_undone_moves: Vec<simple_caro::Coordinate>,
-    game_state: simple_caro::GameState,
-    player1_state: player_manager::PlayerState,
-    player2_state: player_manager::PlayerState,
-}
-
-impl communication::ToMessagePacket for GameContext {
-    fn to_message_packet(self) -> communication::MessagePacket {
-        todo!()
-    }
 }
 
 pub struct GameOperator<A: player_manager::PlayerManager, B: room_manager::RoomManager> {
@@ -75,15 +55,15 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
 
         // set rule
         match self.room_manager.lock().await.get_rule_in_room(rid).unwrap() {
-            communication::GameRule::TicTacToe => {
+            protocol::GameRule::TicTacToe => {
                 self.game.set_rule(simple_caro::RuleType::TicTacToe);
                 self.game.set_board_size(3, 3);
             }
-            communication::GameRule::FourBlockOne => {
+            protocol::GameRule::FourBlockOne => {
                 self.game.set_rule(simple_caro::RuleType::FourBlockOne);
                 self.game.set_board_size(1024, 1024);
             }
-            communication::GameRule::FiveBlockTwo => {
+            protocol::GameRule::FiveBlockTwo => {
                 self.game.set_rule(simple_caro::RuleType::FiveBlockTwo);
                 self.game.set_board_size(1024, 1024);
             }
@@ -153,9 +133,9 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
         self.game.is_over()
     }
 
-    pub async fn execute_player_command(&mut self, cmd_code: communication::PlayerCommand) {
+    pub async fn execute_player_command(&mut self, cmd_code: protocol::PlayerCode) {
         match cmd_code {
-            communication::PlayerCommand::Player1Move(x, y) => {
+            protocol::PlayerCode::Player1Move(x, y) => {
                 let pos = simple_caro::Coordinate {x, y};
                 let result = self.game.player_move(simple_caro::Participant::Player1, pos);
                 match result {
@@ -167,7 +147,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            communication::PlayerCommand::Player2Move(x, y) => {
+            protocol::PlayerCode::Player2Move(x, y) => {
                 let pos = simple_caro::Coordinate {x, y};
                 let result = self.game.player_move(simple_caro::Participant::Player2, pos);
                 match result {
@@ -179,7 +159,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            communication::PlayerCommand::Player1Undo => {
+            protocol::PlayerCode::Player1Undo => {
                 let result = self.game.player_undo(simple_caro::Participant::Player1);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -189,7 +169,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            communication::PlayerCommand::Player2Undo => {
+            protocol::PlayerCode::Player2Undo => {
                 let result = self.game.player_undo(simple_caro::Participant::Player2);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -199,7 +179,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            communication::PlayerCommand::Player1Redo => {
+            protocol::PlayerCode::Player1Redo => {
                 let result = self.game.player_redo(simple_caro::Participant::Player1);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -209,7 +189,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            communication::PlayerCommand::Player2Redo => {
+            protocol::PlayerCode::Player2Redo => {
                 let result = self.game.player_redo(simple_caro::Participant::Player2);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -219,17 +199,17 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            communication::PlayerCommand::Player1RequestContext => {
+            protocol::PlayerCode::Player1RequestContext => {
                 self.response_context().await;
             }
-            communication::PlayerCommand::Player2RequestContext => {
+            protocol::PlayerCode::Player2RequestContext => {
                 self.response_context().await;
             }
-            communication::PlayerCommand::Player1Leave => {
+            protocol::PlayerCode::Player1Leave => {
                 self.game.stop();
                 self.response_context().await;
             }
-            communication::PlayerCommand::Player2Leave => {
+            protocol::PlayerCode::Player2Leave => {
                 self.game.stop();
                 self.response_context().await;
             }
@@ -239,18 +219,116 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
     }
 
     async fn response_context(&mut self) {
-        let game_context = GameContext {
-            board: self.game.get_board(),
-            player1_move_history: self.game.get_moves_history(simple_caro::Participant::Player1),
-            player2_move_history: self.game.get_moves_history(simple_caro::Participant::Player2),
-            player1_undone_moves: self.game.get_undone_moves(simple_caro::Participant::Player1),
-            player2_undone_moves: self.game.get_undone_moves(simple_caro::Participant::Player2),
-            game_state: self.game.get_state(),
-            player1_state: self.player_manager.lock().await.get_player_state(self.player1_id).unwrap(),
-            player2_state: self.player_manager.lock().await.get_player_state(self.player2_id).unwrap(),
+        let mut board = Vec::<Vec<protocol::TileState>>::new();
+        for row in self.game.get_board().borrow().iter() {
+            let mut board_row = Vec::<protocol::TileState>::new();
+            for tile in row {
+                match tile {
+                    simple_caro::TileState::Empty => board_row.push(protocol::TileState::Empty),
+                    simple_caro::TileState::Player1 => board_row.push(protocol::TileState::Player1),
+                    simple_caro::TileState::Player2 => board_row.push(protocol::TileState::Player2),
+                }
+            }
+            board.push(board_row);
+        }
+
+        let mut player1_move_history = Vec::<protocol::Coordinate>::new();
+        for move_lib in self.game.get_moves_history(simple_caro::Participant::Player1) {
+            player1_move_history.push(protocol::Coordinate {
+                x: move_lib.x,
+                y: move_lib.y,
+            });
+        }
+
+        let mut player2_move_history = Vec::<protocol::Coordinate>::new();
+        for move_lib in self.game.get_moves_history(simple_caro::Participant::Player2) {
+            player2_move_history.push(protocol::Coordinate {
+                x: move_lib.x,
+                y: move_lib.y,
+            });
+        }
+
+        let mut player1_undone_moves = Vec::<protocol::Coordinate>::new();
+        for move_lib in self.game.get_undone_moves(simple_caro::Participant::Player1) {
+            player1_undone_moves.push(protocol::Coordinate {
+                x: move_lib.x,
+                y: move_lib.y,
+            });
+        }
+
+        let mut player2_undone_moves = Vec::<protocol::Coordinate>::new();
+        for move_lib in self.game.get_undone_moves(simple_caro::Participant::Player2) {
+            player2_undone_moves.push(protocol::Coordinate {
+                x: move_lib.x,
+                y: move_lib.y,
+            });
+        }
+        
+        let game_state = match self.game.get_state() {
+            simple_caro::GameState::Player1Turn => protocol::GameState::Player1Turn,
+            simple_caro::GameState::Player2Turn => protocol::GameState::Player2Turn,
+            simple_caro::GameState::Player1Won => protocol::GameState::Player1Won,
+            simple_caro::GameState::Player2Won => protocol::GameState::Player2Won,
+            simple_caro::GameState::Drew => protocol::GameState::Drew,
+            simple_caro::GameState::NotInprogress => protocol::GameState::NotInprogress,
         };
-        let game_context_clone = game_context.clone();
-        self.player_manager.lock().await.response(self.player1_id, game_context.to_message_packet()).await;
-        self.player_manager.lock().await.response(self.player2_id, game_context_clone.to_message_packet()).await;
+        
+        let player1_state = match self.player_manager.lock().await.get_player_state(self.player1_id).unwrap() {
+            player_manager::PlayerState::Logged(conn_state) => {
+                match conn_state {
+                    player_manager::ConnectState::Connected => protocol::PlayerState::Logged(protocol::ConnectState::Connected),
+                    player_manager::ConnectState::Disconnected => protocol::PlayerState::Logged(protocol::ConnectState::Disconnected),
+                }
+            },
+            player_manager::PlayerState::InGame(conn_state) => {
+                match conn_state {
+                    player_manager::ConnectState::Connected => protocol::PlayerState::InGame(protocol::ConnectState::Connected),
+                    player_manager::ConnectState::Disconnected => protocol::PlayerState::InGame(protocol::ConnectState::Disconnected),
+                }
+            }
+            player_manager::PlayerState::Waiting(conn_state) => {
+                match conn_state {
+                    player_manager::ConnectState::Connected => protocol::PlayerState::Waiting(protocol::ConnectState::Connected),
+                    player_manager::ConnectState::Disconnected => protocol::PlayerState::Waiting(protocol::ConnectState::Disconnected),
+                }
+            }
+        };
+        
+        let player2_state = match self.player_manager.lock().await.get_player_state(self.player2_id).unwrap() {
+            player_manager::PlayerState::Logged(conn_state) => {
+                match conn_state {
+                    player_manager::ConnectState::Connected => protocol::PlayerState::Logged(protocol::ConnectState::Connected),
+                    player_manager::ConnectState::Disconnected => protocol::PlayerState::Logged(protocol::ConnectState::Disconnected),
+                }
+            },
+            player_manager::PlayerState::InGame(conn_state) => {
+                match conn_state {
+                    player_manager::ConnectState::Connected => protocol::PlayerState::InGame(protocol::ConnectState::Connected),
+                    player_manager::ConnectState::Disconnected => protocol::PlayerState::InGame(protocol::ConnectState::Disconnected),
+                }
+            }
+            player_manager::PlayerState::Waiting(conn_state) => {
+                match conn_state {
+                    player_manager::ConnectState::Connected => protocol::PlayerState::Waiting(protocol::ConnectState::Connected),
+                    player_manager::ConnectState::Disconnected => protocol::PlayerState::Waiting(protocol::ConnectState::Disconnected),
+                }
+            }
+        };
+
+        let game_context = protocol::GameContext {
+            board,
+            player1_move_history,
+            player2_move_history,
+            player1_undone_moves,
+            player2_undone_moves,
+            game_state,
+            player1_state,
+            player2_state,
+        };
+
+        let new_message_packet = protocol::MessagePacket::new_server_packet(protocol::ServerCode::Context(game_context));
+
+        self.player_manager.lock().await.response(self.player1_id, new_message_packet.clone()).await;
+        self.player_manager.lock().await.response(self.player2_id, new_message_packet).await;
     }
 }

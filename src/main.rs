@@ -2,12 +2,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use simple_caro_app::{
-    communication,
-    game_manager,
-    id_pool,
-    make_action,
-    player_manager::{self, PlayerManager},
-    room_manager::{self, RoomManager}
+    client_handler, game_manager, id_pool, make_action, player_manager::{self, PlayerManager}, protocol, room_manager::{self, RoomManager}
 };
 
 #[tokio::main]
@@ -19,7 +14,7 @@ async fn main() {
 
     // let mut player_tracker = PlayerTracker::new(player_manager.clone());
 
-    let mut listener = communication::Listener::new(communication::SERVER_ADDRESS).await;
+    let mut listener = client_handler::Listener::new(client_handler::SERVER_ADDRESS).await;
 
     while let stream = listener.accept().await {
         let new_pid = player_manager.lock().await.add_player(stream).await;
@@ -35,7 +30,7 @@ async fn main() {
 
         player_manager.lock().await.set_action_on_request(
             new_pid,
-            make_action!(move |msg: communication::MessagePacket| {
+            make_action!(move |msg: protocol::MessagePacket| {
                 let player_manager = player_manager_clone.clone();
                 let room_manager = room_manager_clone.clone();
                 let future = async move {
@@ -51,26 +46,30 @@ async fn main() {
 }
 
 async fn handle_room_request(player_manager: Arc<Mutex<player_manager::PlayerContainer>>, room_manager: Arc<Mutex<room_manager::RoomContainer>>,
-                            pid: i32, message: communication::MessagePacket) -> i32 {
+                            pid: i32, message: protocol::MessagePacket) -> i32 {
     let mut room_id = -1;
-    match message.command() {
-        communication::PlayerCommand::RequestRoomAsPlayer1(rule_type) => {
-            let new_rid = room_manager.lock().await.add_room(rule_type);
-            let _result = room_manager.lock().await.add_player_to_room(new_rid, room_manager::PlayerOrder::Player2(pid));
-            player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
-            // player_manager_clone.lock().await.response(new_pid, new_rid);
-            room_id = new_rid;
-        },
-        communication::PlayerCommand::JoinRoomAsPlayer2(rid) => {
-            let _result = room_manager.lock().await.add_player_to_room(rid, room_manager::PlayerOrder::Player2(pid));
-            player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
-            // player_manager_clone.lock().unwrap().response(new_pid, result);
-            room_id = rid;
-        },
-        _ => {
-            // do nothing
+
+    if let protocol::GenericCode::Player(player_code) = message.code() {
+        match player_code {
+            protocol::PlayerCode::RequestRoomAsPlayer1(rule_type) => {
+                let new_rid = room_manager.lock().await.add_room(rule_type);
+                let _result = room_manager.lock().await.add_player_to_room(new_rid, room_manager::PlayerOrder::Player2(pid));
+                player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
+                // player_manager_clone.lock().await.response(new_pid, new_rid);
+                room_id = new_rid;
+            },
+            protocol::PlayerCode::JoinRoomAsPlayer2(rid) => {
+                let _result = room_manager.lock().await.add_player_to_room(rid, room_manager::PlayerOrder::Player2(pid));
+                player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
+                // player_manager_clone.lock().unwrap().response(new_pid, result);
+                room_id = rid;
+            },
+            _ => {
+                // do nothing
+            }
         }
     }
+    
     room_id
 }
 

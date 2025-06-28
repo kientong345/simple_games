@@ -4,73 +4,18 @@ use tokio::sync::Mutex;
 use tokio::net::{TcpListener, TcpStream};
 use futures::future::BoxFuture;
 
+use crate::protocol::{self, ToMessagePacket};
 
-pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(MessagePacket) -> BoxFuture<'static, ()> + Send + 'static>>;
+pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(protocol::MessagePacket) -> BoxFuture<'static, ()> + Send + 'static>>;
 
 #[macro_export]
 macro_rules! make_action {
     ($action:expr) => {
-        Arc::new(tokio::sync::Mutex::new($action)) as crate::communication::HandleAction
+        Arc::new(tokio::sync::Mutex::new($action)) as crate::client_handler::HandleAction
     };
 }
 
 pub const SERVER_ADDRESS: &'static str = "127.0.0.1:12225";
-
-#[derive(Debug, Clone, Copy)]
-pub enum GameRule {
-    TicTacToe,
-    FourBlockOne,
-    FiveBlockTwo,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PlayerCommand {
-    // pregame
-    RequestRoomAsPlayer1(GameRule),
-    JoinRoomAsPlayer2(i32),
-    // ingame
-    Player1Move(i64, i64),
-    Player2Move(i64, i64),
-    Player1Undo,
-    Player2Undo,
-    Player1Redo,
-    Player2Redo,
-    Player1RequestContext,
-    Player2RequestContext,
-    Player1Leave,
-    Player2Leave,
-}
-
-pub enum ServerResponse {
-
-}
-
-#[derive(Debug, Clone)]
-pub struct MessagePacket {
-    raw_data: Vec<u8>,
-}
-
-impl<'a> MessagePacket {
-    pub fn command(&self) -> PlayerCommand {
-        todo!()
-    }
-
-    pub fn to_serial(self) -> Vec<u8> {
-        self.raw_data
-    }
-}
-
-pub trait ToMessagePacket {
-    fn to_message_packet(self) -> MessagePacket;
-}
-
-impl ToMessagePacket for &[u8] {
-    fn to_message_packet(self) -> MessagePacket {
-        MessagePacket {
-            raw_data: self.to_vec(),
-        }
-    }
-}
 
 pub struct Stream {
     stream: TcpStream,
@@ -120,7 +65,7 @@ pub struct ClientHandler {
 
 impl ClientHandler {
     pub fn new(stream: Stream) -> Self {
-        let action = make_action!(|_msg: MessagePacket| {
+        let action = make_action!(|_msg: protocol::MessagePacket| {
             let future = async move {
             };
             Box::pin(future) as BoxFuture<'static, ()>
@@ -151,7 +96,7 @@ impl ClientHandler {
         self.action.clone()
     }
 
-    pub async fn response(&mut self, message: MessagePacket) {
+    pub async fn response(&mut self, message: protocol::MessagePacket) {
         self.stream.lock().await.send(message.to_serial()).await;
     }
 
