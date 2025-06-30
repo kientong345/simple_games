@@ -2,7 +2,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use simple_caro_app::{
-    client_handler, game_manager, id_pool, make_action, player_manager::{self, PlayerManager}, caro_protocol, room_manager::{self, RoomManager}
+    caro_protocol, client_handler, game_manager, id_pool, make_action, player_manager::{self, PlayerManager}, room_manager::{self, RoomManager}
 };
 
 #[tokio::main]
@@ -14,7 +14,7 @@ async fn main() {
 
     // let mut player_tracker = PlayerTracker::new(player_manager.clone());
 
-    let mut listener = client_handler::Listener::new(client_handler::SERVER_ADDRESS).await;
+    let mut listener = client_handler::Listener::new(caro_protocol::SERVER_ADDRESS).await;
 
     while let stream = listener.accept().await {
         let new_pid = player_manager.lock().await.add_player(stream).await;
@@ -34,16 +34,24 @@ async fn main() {
                 let player_manager = player_manager_clone.clone();
                 let room_manager = room_manager_clone.clone();
                 let future = async move {
-                    // println!("{:?}", msg.command());
-                    // println!("{:?}", msg.to_serial());
+                    println!("{:?}", msg.code());
                     let room_id = handle_room_request(player_manager.clone(), room_manager.clone(), new_pid, msg).await;
-                    run_a_game(player_manager.clone(), room_manager.clone(), room_id).await;
+                    if room_manager.lock().await.room_full(room_id) {
+                        let (pid1, pid2) =room_manager.lock().await.get_pids_in_room(room_id).unwrap();
+                        let code = caro_protocol::ServerCode::FailedToCreateRoom;
+                        let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
+                        player_manager.lock().await.response(pid1, new_packet.clone()).await;
+                        player_manager.lock().await.response(pid2, new_packet).await;
+                        run_a_game(player_manager.clone(), room_manager.clone(), room_id).await;
+                    }
                 };
                 Box::pin(future) as futures::future::BoxFuture<'static, ()>
             }
         )).await;
     }
 }
+
+
 
 async fn handle_room_request(player_manager: Arc<Mutex<player_manager::PlayerContainer>>, room_manager: Arc<Mutex<room_manager::RoomContainer>>,
                             pid: i32, message: caro_protocol::MessagePacket) -> i32 {
@@ -53,19 +61,35 @@ async fn handle_room_request(player_manager: Arc<Mutex<player_manager::PlayerCon
         match player_code {
             caro_protocol::PlayerCode::RequestRoomAsPlayer1(rule_type) => {
                 let new_rid = room_manager.lock().await.add_room(rule_type);
+                if new_rid == -1 {
+                    let code = caro_protocol::ServerCode::FailedToCreateRoom;
+                    let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
+                    player_manager.lock().await.response(pid, new_packet).await;
+                    return -1;
+                }
                 let _result = room_manager.lock().await.add_player_to_room(new_rid, room_manager::PlayerOrder::Player2(pid));
+                if !_result {
+                    let code = caro_protocol::ServerCode::FailedToJoinRoom(new_rid);
+                    let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
+                    player_manager.lock().await.response(pid, new_packet).await;
+                    return -1;
+                }
                 player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
-                // player_manager_clone.lock().await.response(new_pid, new_rid);
+                let code = caro_protocol::ServerCode::JoinedRoomAsPlayer1(new_rid);
+                let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
+                player_manager.lock().await.response(pid, new_packet).await;
                 room_id = new_rid;
             },
             caro_protocol::PlayerCode::JoinRoomAsPlayer2(rid) => {
                 let _result = room_manager.lock().await.add_player_to_room(rid, room_manager::PlayerOrder::Player2(pid));
                 player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
-                // player_manager_clone.lock().unwrap().response(new_pid, result);
+                let code = caro_protocol::ServerCode::JoinedRoomAsPlayer2(rid);
+                let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
+                player_manager.lock().await.response(pid, new_packet).await;
                 room_id = rid;
             },
             _ => {
-                // do nothing
+                // do not process other requests
             }
         }
     }

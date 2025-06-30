@@ -1,5 +1,11 @@
 use serde::{Serialize, Deserialize};
 
+pub const SERVER_ADDRESS: &'static str = "127.0.0.1:12225";
+
+pub type RoomId = i32;
+pub type PlayerId = i32;
+pub type Coordinate = (i64, i64);
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum GameRule {
     TicTacToe,
@@ -37,12 +43,6 @@ pub enum PlayerState {
     InGame(ConnectState),
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Coordinate {
-    pub x: i64,
-    pub y: i64,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameContext {
     pub board: Vec<Vec<TileState>>,
@@ -59,10 +59,10 @@ pub struct GameContext {
 pub enum PlayerCode {
     // pregame
     RequestRoomAsPlayer1(GameRule),
-    JoinRoomAsPlayer2(i32),
+    JoinRoomAsPlayer2(RoomId),
     // ingame
-    Player1Move(i64, i64),
-    Player2Move(i64, i64),
+    Player1Move(Coordinate),
+    Player2Move(Coordinate),
     Player1Undo,
     Player2Undo,
     Player1Redo,
@@ -76,10 +76,11 @@ pub enum PlayerCode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerCode {
     // pregame
-    JoinedRoomAsPlayer1(i32),
-    JoinedRoomAsPlayer2(i32),
-    FailedToJoinRoom(i32),
-    YourRoomIsFull,
+    JoinedRoomAsPlayer1(RoomId),
+    JoinedRoomAsPlayer2(RoomId),
+    FailedToCreateRoom,
+    FailedToJoinRoom(RoomId),
+    YourRoomIsFull(RoomId),
     // ingame
     MoveSuccess,
     MoveUnsuccess,

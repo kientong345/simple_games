@@ -15,8 +15,6 @@ macro_rules! make_action {
     };
 }
 
-pub const SERVER_ADDRESS: &'static str = "127.0.0.1:12225";
-
 pub struct Stream {
     stream: TcpStream,
     buffer: [u8; 1024],
@@ -31,7 +29,13 @@ impl Stream {
     }
 
     async fn receive(&mut self) -> (Vec<u8>, usize) {
-        let bytesread = self.stream.read(&mut self.buffer).await.unwrap();
+        let bytesread = loop {
+            let br = self.stream.read(&mut self.buffer).await.unwrap();
+            if br !=0 {
+                break br;
+            }
+        };
+        // let bytesread = self.stream.read(&mut self.buffer).await.unwrap();
         (self.buffer[..bytesread].to_vec(), bytesread)
     }
 
@@ -85,6 +89,7 @@ impl ClientHandler {
                 break;
             }
             tokio::spawn(target_clone.lock().await.action.lock().await(msg));
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         }
     }
 

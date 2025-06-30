@@ -173,7 +173,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
 
     pub async fn execute_player_command(&mut self, cmd_code: caro_protocol::PlayerCode) -> bool {
         match cmd_code {
-            caro_protocol::PlayerCode::Player1Move(x, y) => {
+            caro_protocol::PlayerCode::Player1Move((x, y)) => {
                 let pos = simple_caro::Coordinate {x, y};
                 let result = self.game.player_move(simple_caro::Participant::Player1, pos);
                 match result {
@@ -185,7 +185,7 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            caro_protocol::PlayerCode::Player2Move(x, y) => {
+            caro_protocol::PlayerCode::Player2Move((x, y)) => {
                 let pos = simple_caro::Coordinate {x, y};
                 let result = self.game.player_move(simple_caro::Participant::Player2, pos);
                 match result {
@@ -275,34 +275,22 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
 
         let mut player1_move_history = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_moves_history(simple_caro::Participant::Player1) {
-            player1_move_history.push(caro_protocol::Coordinate {
-                x: move_lib.x,
-                y: move_lib.y,
-            });
+            player1_move_history.push((move_lib.x, move_lib.y));
         }
 
         let mut player2_move_history = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_moves_history(simple_caro::Participant::Player2) {
-            player2_move_history.push(caro_protocol::Coordinate {
-                x: move_lib.x,
-                y: move_lib.y,
-            });
+            player2_move_history.push((move_lib.x, move_lib.y));
         }
 
         let mut player1_undone_moves = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_undone_moves(simple_caro::Participant::Player1) {
-            player1_undone_moves.push(caro_protocol::Coordinate {
-                x: move_lib.x,
-                y: move_lib.y,
-            });
+            player1_undone_moves.push((move_lib.x, move_lib.y));
         }
 
         let mut player2_undone_moves = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_undone_moves(simple_caro::Participant::Player2) {
-            player2_undone_moves.push(caro_protocol::Coordinate {
-                x: move_lib.x,
-                y: move_lib.y,
-            });
+            player2_undone_moves.push((move_lib.x, move_lib.y));
         }
         
         let game_state = match self.game.get_state() {
