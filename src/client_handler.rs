@@ -29,13 +29,13 @@ impl Stream {
     }
 
     async fn receive(&mut self) -> (Vec<u8>, usize) {
-        let bytesread = loop {
-            let br = self.stream.read(&mut self.buffer).await.unwrap();
-            if br !=0 {
-                break br;
-            }
-        };
-        // let bytesread = self.stream.read(&mut self.buffer).await.unwrap();
+        // let bytesread = loop {
+        //     let br = self.stream.read(&mut self.buffer).await.unwrap();
+        //     if br !=0 {
+        //         break br;
+        //     }
+        // };
+        let bytesread = self.stream.read(&mut self.buffer).await.unwrap();
         (self.buffer[..bytesread].to_vec(), bytesread)
     }
 
@@ -84,10 +84,10 @@ impl ClientHandler {
         loop {
             let target_clone = target.clone();
             let (msg, bytesread) = target_clone.lock().await.stream.lock().await.receive().await;
-            let msg = msg.to_message_packet();
             if bytesread == 0 {
                 break;
             }
+            let msg = msg.to_message_packet();
             tokio::spawn(target_clone.lock().await.action.lock().await(msg));
             tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         }
