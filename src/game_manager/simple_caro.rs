@@ -4,8 +4,8 @@ include!("../../lib/Simple_Caro.rs");
 
 #[derive(Debug, Clone)]
 pub struct Coordinate {
-    pub x: i64,
-    pub y: i64,
+    pub latitude: i64,
+    pub longtitude: i64,
 }
 
 #[derive(Clone, Debug)]
@@ -61,6 +61,14 @@ impl SimpleCaro {
         unsafe {caro_set_board_size(self.gid, width, height);}
     }
 
+    pub fn get_board_width(&self) -> i32 {
+        unsafe {caro_get_board_width(self.gid) as i32}
+    }
+
+    pub fn get_board_height(&self) -> i32 {
+        unsafe {caro_get_board_height(self.gid) as i32}
+    }
+
     pub fn set_rule(&self, rule: RuleType) {
         match rule {
             RuleType::TicTacToe => unsafe {caro_set_rule(self.gid, CARO_RULE_TYPE_CARO_TIC_TAC_TOE);}
@@ -87,8 +95,8 @@ impl SimpleCaro {
 
     pub fn player_move(&self, who: Participant, pos: Coordinate) -> MoveResult {
         let c_move = CARO_Coordinate {
-            x: pos.x,
-            y: pos.y,
+            latitude: pos.latitude,
+            longtitude: pos.longtitude,
         };
         let result: CARO_MOVE_RESULT;
         match who {
@@ -138,33 +146,55 @@ impl SimpleCaro {
         unsafe {caro_switch_turn(self.gid);}
     }
 
-    pub fn get_board(&self) -> Rc<RefCell<Vec<Vec<TileState>>>> {
-        let mut c_board = std::mem::MaybeUninit::<CARO_Board_Struct>::uninit();
-        unsafe {caro_get_board(self.gid, c_board.as_mut_ptr());}
-        let board = Rc::new(RefCell::new(Vec::<Vec<TileState>>::new()));
-        unsafe {
-            let mut c_board = c_board.assume_init();
-            board.borrow_mut().resize(c_board.height as usize, Vec::<TileState>::new());
-            for k in 0..c_board.height {
-                board.borrow_mut()[k as usize].resize(c_board.width as usize, TileState::Empty);
-            }
-            if !c_board.board.is_null() {
-                for i in 0..c_board.height as usize {
-                    let row_ptr = *c_board.board.add(i);
-                    for j in 0..c_board.width as usize {
-                        let tile = *row_ptr.add(j);
-                        board.borrow_mut()[i][j] = match tile {
-                            CARO_TILE_STATE_CARO_TILE_EMPTY => TileState::Empty,
-                            CARO_TILE_STATE_CARO_TILE_PLAYER1 => TileState::Player1,
-                            CARO_TILE_STATE_CARO_TILE_PLAYER2 => TileState::Player2,
-                            _ => TileState::Empty,
-                        };
-                    }
-                }
-            }
-            caro_free_board(&mut c_board as *mut CARO_Board_Struct);
+    // pub fn get_board(&self) -> Rc<RefCell<Vec<Vec<TileState>>>> {
+    //     let mut c_board = std::mem::MaybeUninit::<CARO_Board_Struct>::uninit();
+    //     unsafe {caro_get_board(self.gid, c_board.as_mut_ptr());}
+    //     let board = Rc::new(RefCell::new(Vec::<Vec<TileState>>::new()));
+    //     unsafe {
+    //         let mut c_board = c_board.assume_init();
+    //         board.borrow_mut().resize(c_board.height as usize, Vec::<TileState>::new());
+    //         for k in 0..c_board.height {
+    //             board.borrow_mut()[k as usize].resize(c_board.width as usize, TileState::Empty);
+    //         }
+    //         if !c_board.board.is_null() {
+    //             for i in 0..c_board.height as usize {
+    //                 let row_ptr = *c_board.board.add(i);
+    //                 for j in 0..c_board.width as usize {
+    //                     let tile = *row_ptr.add(j);
+    //                     board.borrow_mut()[i][j] = match tile {
+    //                         CARO_TILE_STATE_CARO_TILE_EMPTY => TileState::Empty,
+    //                         CARO_TILE_STATE_CARO_TILE_PLAYER1 => TileState::Player1,
+    //                         CARO_TILE_STATE_CARO_TILE_PLAYER2 => TileState::Player2,
+    //                         _ => TileState::Empty,
+    //                     };
+    //                 }
+    //             }
+    //         }
+    //         caro_free_board(&mut c_board as *mut CARO_Board_Struct);
+    //     }
+    //     board
+    // }
+
+    pub fn occupied_tiles_count(&self) -> i64 {
+        unsafe {caro_occupied_tiles_count(self.gid)}
+    }
+
+    pub fn get_board_row(&self, latitude: i32) -> Vec<TileState> {
+        todo!()
+    }
+
+    pub fn get_board_column(&self, longtitude: i32) -> Vec<TileState> {
+        todo!()
+    }
+
+    pub fn get_board_tile(&self, latitude: i32, longtitude: i32) -> TileState {
+        let tile_state = unsafe {caro_get_tile_state(self.gid, latitude, longtitude)};
+        match tile_state {
+            CARO_TILE_STATE_CARO_TILE_EMPTY => TileState::Empty,
+            CARO_TILE_STATE_CARO_TILE_PLAYER1 => TileState::Player1,
+            CARO_TILE_STATE_CARO_TILE_PLAYER2 => TileState::Player2,
+            _ => TileState::Empty,
         }
-        board
     }
 
     pub fn get_state(&self) -> GameState {
@@ -196,8 +226,8 @@ impl SimpleCaro {
             if !c_moves_history.moves_set.is_null() {
                 for i in 0..c_moves_history.length {
                     let pos = Coordinate {
-                        x: (*c_moves_history.moves_set.add(i)).x,
-                        y: (*c_moves_history.moves_set.add(i)).y,
+                        latitude: (*c_moves_history.moves_set.add(i)).latitude,
+                        longtitude: (*c_moves_history.moves_set.add(i)).longtitude,
                     };
                     moves_history.push(pos);
                 }
@@ -219,8 +249,8 @@ impl SimpleCaro {
             if !c_undone_moves.moves_set.is_null() {
                 for i in 0..c_undone_moves.length {
                     let pos = Coordinate {
-                        x: (*c_undone_moves.moves_set.add(i)).x,
-                        y: (*c_undone_moves.moves_set.add(i)).y,
+                        latitude: (*c_undone_moves.moves_set.add(i)).latitude,
+                        longtitude: (*c_undone_moves.moves_set.add(i)).longtitude,
                     };
                     undone_moves.push(pos);
                 }

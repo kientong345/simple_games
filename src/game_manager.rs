@@ -173,8 +173,8 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
 
     pub async fn execute_player_command(&mut self, cmd_code: caro_protocol::PlayerCode) -> bool {
         match cmd_code {
-            caro_protocol::PlayerCode::Player1Move((x, y)) => {
-                let pos = simple_caro::Coordinate {x, y};
+            caro_protocol::PlayerCode::Player1Move((latitude, longtitude)) => {
+                let pos = simple_caro::Coordinate {latitude, longtitude};
                 let result = self.game.player_move(simple_caro::Participant::Player1, pos);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -185,8 +185,8 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
                     }
                 }
             }
-            caro_protocol::PlayerCode::Player2Move((x, y)) => {
-                let pos = simple_caro::Coordinate {x, y};
+            caro_protocol::PlayerCode::Player2Move((latitude, longtitude)) => {
+                let pos = simple_caro::Coordinate {latitude, longtitude};
                 let result = self.game.player_move(simple_caro::Participant::Player2, pos);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -261,36 +261,36 @@ where A: player_manager::PlayerManager, B: room_manager::RoomManager {
 
     async fn response_context(&mut self) {
         let mut board = Vec::<Vec<caro_protocol::TileState>>::new();
-        for row in self.game.get_board().borrow().iter() {
-            let mut board_row = Vec::<caro_protocol::TileState>::new();
-            for tile in row {
-                match tile {
-                    simple_caro::TileState::Empty => board_row.push(caro_protocol::TileState::Empty),
-                    simple_caro::TileState::Player1 => board_row.push(caro_protocol::TileState::Player1),
-                    simple_caro::TileState::Player2 => board_row.push(caro_protocol::TileState::Player2),
+        for latitude in 0..self.game.get_board_height() {
+            let mut row = Vec::<caro_protocol::TileState>::new();
+            for longtitude in 0..self.game.get_board_width() {
+                match self.game.get_board_tile(latitude, longtitude) {
+                    simple_caro::TileState::Player1 => row.push(caro_protocol::TileState::Player1),
+                    simple_caro::TileState::Player2 => row.push(caro_protocol::TileState::Player2),
+                    simple_caro::TileState::Empty => row.push(caro_protocol::TileState::Empty),
                 }
             }
-            board.push(board_row);
+            board.push(row);
         }
 
         let mut player1_move_history = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_moves_history(simple_caro::Participant::Player1) {
-            player1_move_history.push((move_lib.x, move_lib.y));
+            player1_move_history.push((move_lib.latitude, move_lib.longtitude));
         }
 
         let mut player2_move_history = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_moves_history(simple_caro::Participant::Player2) {
-            player2_move_history.push((move_lib.x, move_lib.y));
+            player2_move_history.push((move_lib.latitude, move_lib.longtitude));
         }
 
         let mut player1_undone_moves = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_undone_moves(simple_caro::Participant::Player1) {
-            player1_undone_moves.push((move_lib.x, move_lib.y));
+            player1_undone_moves.push((move_lib.latitude, move_lib.longtitude));
         }
 
         let mut player2_undone_moves = Vec::<caro_protocol::Coordinate>::new();
         for move_lib in self.game.get_undone_moves(simple_caro::Participant::Player2) {
-            player2_undone_moves.push((move_lib.x, move_lib.y));
+            player2_undone_moves.push((move_lib.latitude, move_lib.longtitude));
         }
         
         let game_state = match self.game.get_state() {

@@ -20,8 +20,8 @@ typedef enum {
 } CARO_RULE_TYPE;
 
 typedef struct {
-    long x;
-    long y;
+    long latitude;
+    long longtitude;
 } CARO_Coordinate;
 
 typedef enum {
@@ -47,10 +47,9 @@ typedef enum {
 } CARO_GAME_STATE;
 
 typedef struct {
-    CARO_TILE_STATE** board;
-    long width;
-    long height;
-} CARO_Board_Struct;
+    CARO_TILE_STATE* board_line;
+    size_t length;
+} CARO_Board_Line;
 
 typedef struct {
     CARO_Coordinate* moves_set;
@@ -60,6 +59,8 @@ typedef struct {
 int caro_init_game();
 void caro_deinit_game(int gid_);
 void caro_set_board_size(int gid_, int width_, int height_);
+size_t caro_get_board_width(int gid_);
+size_t caro_get_board_height(int gid_);
 void caro_set_rule(int gid_, CARO_RULE_TYPE rule_);
 void caro_unset_rule(int gid_);
 void caro_start(int gid_, CARO_GAME_STATE first_turn_);
@@ -68,13 +69,16 @@ CARO_MOVE_RESULT caro_player_move(int gid_, CARO_PARTICIPANT who_, CARO_Coordina
 CARO_MOVE_RESULT caro_player_undo(int gid_, CARO_PARTICIPANT who_);
 CARO_MOVE_RESULT caro_player_redo(int gid_, CARO_PARTICIPANT who_);
 void caro_switch_turn(int gid_);
-void caro_get_board(int gid_, CARO_Board_Struct* data_);
+long caro_occupied_tiles_count(int gid_);
+void caro_get_board_row(int gid_, CARO_Board_Line* data_, int latitude_);
+void caro_get_board_column(int gid_, CARO_Board_Line* data_, int longtitude_);
+CARO_TILE_STATE caro_get_tile_state(int gid_, int latitude_, int longtitude_);
 CARO_GAME_STATE caro_get_state(int gid_);
 bool caro_is_over(int gid_);
 void caro_get_moves_history(int gid_, CARO_Moves_Set* data_, CARO_PARTICIPANT who_);
 void caro_get_undone_moves(int gid_, CARO_Moves_Set* data_, CARO_PARTICIPANT who_);
 
-void caro_free_board(CARO_Board_Struct* data_);
+void caro_free_board_line(CARO_Board_Line* data_);
 void caro_free_move_set(CARO_Moves_Set* data_);
 
 #ifdef __cplusplus

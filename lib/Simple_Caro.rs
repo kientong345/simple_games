@@ -31,15 +31,17 @@ pub type CARO_RULE_TYPE = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct CARO_Coordinate {
-    pub x: ::std::os::raw::c_long,
-    pub y: ::std::os::raw::c_long,
+    pub latitude: ::std::os::raw::c_long,
+    pub longtitude: ::std::os::raw::c_long,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
     ["Size of CARO_Coordinate"][::std::mem::size_of::<CARO_Coordinate>() - 16usize];
     ["Alignment of CARO_Coordinate"][::std::mem::align_of::<CARO_Coordinate>() - 8usize];
-    ["Offset of field: CARO_Coordinate::x"][::std::mem::offset_of!(CARO_Coordinate, x) - 0usize];
-    ["Offset of field: CARO_Coordinate::y"][::std::mem::offset_of!(CARO_Coordinate, y) - 8usize];
+    ["Offset of field: CARO_Coordinate::latitude"]
+        [::std::mem::offset_of!(CARO_Coordinate, latitude) - 0usize];
+    ["Offset of field: CARO_Coordinate::longtitude"]
+        [::std::mem::offset_of!(CARO_Coordinate, longtitude) - 8usize];
 };
 pub const CARO_TILE_STATE_CARO_TILE_EMPTY: CARO_TILE_STATE = 0;
 pub const CARO_TILE_STATE_CARO_TILE_PLAYER1: CARO_TILE_STATE = 1;
@@ -59,21 +61,18 @@ pub const CARO_GAME_STATE_CARO_NOT_INPROGRESS: CARO_GAME_STATE = 5;
 pub type CARO_GAME_STATE = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct CARO_Board_Struct {
-    pub board: *mut *mut CARO_TILE_STATE,
-    pub width: ::std::os::raw::c_long,
-    pub height: ::std::os::raw::c_long,
+pub struct CARO_Board_Line {
+    pub board_line: *mut CARO_TILE_STATE,
+    pub length: usize,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of CARO_Board_Struct"][::std::mem::size_of::<CARO_Board_Struct>() - 24usize];
-    ["Alignment of CARO_Board_Struct"][::std::mem::align_of::<CARO_Board_Struct>() - 8usize];
-    ["Offset of field: CARO_Board_Struct::board"]
-        [::std::mem::offset_of!(CARO_Board_Struct, board) - 0usize];
-    ["Offset of field: CARO_Board_Struct::width"]
-        [::std::mem::offset_of!(CARO_Board_Struct, width) - 8usize];
-    ["Offset of field: CARO_Board_Struct::height"]
-        [::std::mem::offset_of!(CARO_Board_Struct, height) - 16usize];
+    ["Size of CARO_Board_Line"][::std::mem::size_of::<CARO_Board_Line>() - 16usize];
+    ["Alignment of CARO_Board_Line"][::std::mem::align_of::<CARO_Board_Line>() - 8usize];
+    ["Offset of field: CARO_Board_Line::board_line"]
+        [::std::mem::offset_of!(CARO_Board_Line, board_line) - 0usize];
+    ["Offset of field: CARO_Board_Line::length"]
+        [::std::mem::offset_of!(CARO_Board_Line, length) - 8usize];
 };
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -102,6 +101,12 @@ unsafe extern "C" {
         width_: ::std::os::raw::c_int,
         height_: ::std::os::raw::c_int,
     );
+}
+unsafe extern "C" {
+    pub fn caro_get_board_width(gid_: ::std::os::raw::c_int) -> usize;
+}
+unsafe extern "C" {
+    pub fn caro_get_board_height(gid_: ::std::os::raw::c_int) -> usize;
 }
 unsafe extern "C" {
     pub fn caro_set_rule(gid_: ::std::os::raw::c_int, rule_: CARO_RULE_TYPE);
@@ -138,7 +143,28 @@ unsafe extern "C" {
     pub fn caro_switch_turn(gid_: ::std::os::raw::c_int);
 }
 unsafe extern "C" {
-    pub fn caro_get_board(gid_: ::std::os::raw::c_int, data_: *mut CARO_Board_Struct);
+    pub fn caro_occupied_tiles_count(gid_: ::std::os::raw::c_int) -> ::std::os::raw::c_long;
+}
+unsafe extern "C" {
+    pub fn caro_get_board_row(
+        gid_: ::std::os::raw::c_int,
+        data_: *mut CARO_Board_Line,
+        latitude_: ::std::os::raw::c_int,
+    );
+}
+unsafe extern "C" {
+    pub fn caro_get_board_column(
+        gid_: ::std::os::raw::c_int,
+        data_: *mut CARO_Board_Line,
+        longtitude_: ::std::os::raw::c_int,
+    );
+}
+unsafe extern "C" {
+    pub fn caro_get_tile_state(
+        gid_: ::std::os::raw::c_int,
+        latitude_: ::std::os::raw::c_int,
+        longtitude_: ::std::os::raw::c_int,
+    ) -> CARO_TILE_STATE;
 }
 unsafe extern "C" {
     pub fn caro_get_state(gid_: ::std::os::raw::c_int) -> CARO_GAME_STATE;
@@ -161,7 +187,7 @@ unsafe extern "C" {
     );
 }
 unsafe extern "C" {
-    pub fn caro_free_board(data_: *mut CARO_Board_Struct);
+    pub fn caro_free_board_line(data_: *mut CARO_Board_Line);
 }
 unsafe extern "C" {
     pub fn caro_free_move_set(data_: *mut CARO_Moves_Set);
