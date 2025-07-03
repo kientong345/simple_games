@@ -96,11 +96,7 @@ unsafe extern "C" {
     pub fn caro_deinit_game(gid_: ::std::os::raw::c_int);
 }
 unsafe extern "C" {
-    pub fn caro_set_board_size(
-        gid_: ::std::os::raw::c_int,
-        width_: ::std::os::raw::c_int,
-        height_: ::std::os::raw::c_int,
-    );
+    pub fn caro_set_board_size(gid_: ::std::os::raw::c_int, width_: usize, height_: usize);
 }
 unsafe extern "C" {
     pub fn caro_get_board_width(gid_: ::std::os::raw::c_int) -> usize;
@@ -149,21 +145,21 @@ unsafe extern "C" {
     pub fn caro_get_board_row(
         gid_: ::std::os::raw::c_int,
         data_: *mut CARO_Board_Line,
-        latitude_: ::std::os::raw::c_int,
+        latitude_: usize,
     );
 }
 unsafe extern "C" {
     pub fn caro_get_board_column(
         gid_: ::std::os::raw::c_int,
         data_: *mut CARO_Board_Line,
-        longtitude_: ::std::os::raw::c_int,
+        longtitude_: usize,
     );
 }
 unsafe extern "C" {
     pub fn caro_get_tile_state(
         gid_: ::std::os::raw::c_int,
-        latitude_: ::std::os::raw::c_int,
-        longtitude_: ::std::os::raw::c_int,
+        latitude_: usize,
+        longtitude_: usize,
     ) -> CARO_TILE_STATE;
 }
 unsafe extern "C" {

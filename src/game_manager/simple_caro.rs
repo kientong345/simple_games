@@ -57,16 +57,16 @@ impl SimpleCaro {
         }
     }
 
-    pub fn set_board_size(&self, width: i32, height: i32) {
+    pub fn set_board_size(&self, width: usize, height: usize) {
         unsafe {caro_set_board_size(self.gid, width, height);}
     }
 
-    pub fn get_board_width(&self) -> i32 {
-        unsafe {caro_get_board_width(self.gid) as i32}
+    pub fn get_board_width(&self) -> usize {
+        unsafe {caro_get_board_width(self.gid)}
     }
 
-    pub fn get_board_height(&self) -> i32 {
-        unsafe {caro_get_board_height(self.gid) as i32}
+    pub fn get_board_height(&self) -> usize {
+        unsafe {caro_get_board_height(self.gid)}
     }
 
     pub fn set_rule(&self, rule: RuleType) {
@@ -179,15 +179,15 @@ impl SimpleCaro {
         unsafe {caro_occupied_tiles_count(self.gid)}
     }
 
-    pub fn get_board_row(&self, latitude: i32) -> Vec<TileState> {
+    pub fn get_board_row(&self, latitude: usize) -> Vec<TileState> {
         todo!()
     }
 
-    pub fn get_board_column(&self, longtitude: i32) -> Vec<TileState> {
+    pub fn get_board_column(&self, longtitude: usize) -> Vec<TileState> {
         todo!()
     }
 
-    pub fn get_board_tile(&self, latitude: i32, longtitude: i32) -> TileState {
+    pub fn get_board_tile(&self, latitude: usize, longtitude: usize) -> TileState {
         let tile_state = unsafe {caro_get_tile_state(self.gid, latitude, longtitude)};
         match tile_state {
             CARO_TILE_STATE_CARO_TILE_EMPTY => TileState::Empty,
