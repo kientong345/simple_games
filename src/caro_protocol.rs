@@ -5,6 +5,7 @@ pub const SERVER_ADDRESS: &'static str = "127.0.0.1:12225";
 pub type RoomId = i32;
 pub type PlayerId = i32;
 pub type Coordinate = (i64, i64);
+pub type Row = Vec<TileState>;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum GameRule {
@@ -45,7 +46,7 @@ pub enum PlayerState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameContext {
-    pub board: Vec<Vec<TileState>>,
+    pub board: Vec<Row>,
     pub player1_move_history: Vec<Coordinate>,
     pub player2_move_history: Vec<Coordinate>,
     pub player1_undone_moves: Vec<Coordinate>,
