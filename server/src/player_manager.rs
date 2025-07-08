@@ -1,5 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
-use tokio::{sync::Mutex, task::JoinHandle};
+use tokio::sync::Mutex;
 
 use crate::{
     client_handler::{self, HandleAction}, id_pool, caro_protocol
@@ -21,20 +21,21 @@ pub enum PlayerState {
 struct Player {
     pid: i32,
     state: PlayerState,
-    handler: Arc<Mutex<client_handler::ClientHandler>>,
-    joinhandler: JoinHandle<()>,
+    responser: client_handler::Responser,
+    request_getter: Arc<Mutex<client_handler::RequestGetter>>,
+    response_handler: Option<Arc<Mutex<client_handler::ResponseHandler>>>,
 }
 
 impl Player {
-    async fn new(pid: i32, stream: client_handler::Stream) -> Self {
-        let handler = Arc::new(Mutex::new(client_handler::ClientHandler::new(stream)));
-        let handler_clone = handler.clone();
-        let joinhandler = tokio::spawn(client_handler::ClientHandler::handling_request(handler_clone));
+    fn new(pid: i32, receiver: client_handler::Receiver, sender: client_handler::Sender) -> Self {
+        let responser = client_handler::Responser::new(sender);
+        let request_getter = Arc::new(Mutex::new(client_handler::RequestGetter::new(receiver)));
         Self {
             pid,
             state: PlayerState::Logged(ConnectState::Connected),
-            handler,
-            joinhandler,
+            responser,
+            request_getter,
+            response_handler: None,
         }
     }
 
@@ -51,15 +52,34 @@ impl Player {
     }
 
     async fn set_action_on_request(&mut self, action: HandleAction) {
-        self.handler.lock().await.set_action_on_request(action).await;
+        self.request_getter.lock().await.set_action_on_request(action);
     }
 
     async fn get_action_on_request(&self) -> HandleAction {
-        self.handler.lock().await.get_action_on_request().await
+        self.request_getter.lock().await.get_action_on_request()
     }
 
-    async fn response(&self, message: caro_protocol::MessagePacket) {
-        self.handler.lock().await.response(message).await;
+    async fn response(&mut self, message: caro_protocol::MessagePacket) {
+        self.responser.send_response(message).await;
+    }
+
+    async fn handling_request(&mut self) -> bool {
+        if self.response_handler.is_none() {
+            self.response_handler = Some(Arc::new(Mutex::new(client_handler::RequestGetter::handling_request(self.request_getter.clone()).await)));
+            true
+        } else {
+            false
+        }
+    }
+
+    async fn stop_handling_request(&mut self) -> bool {
+        if self.response_handler.is_none() {
+            false
+        } else {
+            let request_handler_clone = self.response_handler.clone().unwrap();
+            client_handler::RequestGetter::stop_handling_request(request_handler_clone).await;
+            true
+        }
     }
 
     fn check_alive(&self) -> bool {
@@ -70,20 +90,16 @@ impl Player {
     }
 }
 
-impl Drop for Player {
-    fn drop(&mut self) {
-        self.joinhandler.abort();
-    }
-}
-
 pub trait PlayerManager {
-    async fn add_player(&mut self, stream: client_handler::Stream) -> i32;
+    fn add_player(&mut self, receiver: client_handler::Receiver, sender: client_handler::Sender) -> i32;
     fn remove_player(&mut self, pid: i32);
     fn set_player_state(&mut self, pid: i32, state: PlayerState);
     fn get_player_state(&self, pid: i32) -> Option<PlayerState>;
     async fn set_action_on_request(&mut self, pid: i32, action: HandleAction);
     async fn get_action_on_request(&self, pid: i32) -> HandleAction;
-    async fn response(&self, pid: i32, message: caro_protocol::MessagePacket);
+    async fn handling_request(&mut self, pid: i32) -> bool;
+    async fn stop_handling_request(&mut self, pid: i32) -> bool;
+    async fn response(&mut self, pid: i32, message: caro_protocol::MessagePacket);
     fn check_alive(&self, pid: i32) -> bool;
     fn player_exist(&self, pid: i32) -> bool;
 }
@@ -105,12 +121,12 @@ impl PlayerContainer {
 }
 
 impl PlayerManager for PlayerContainer {
-    async fn add_player(&mut self, stream: client_handler::Stream) -> i32 {
+    fn add_player(&mut self, receiver: client_handler::Receiver, sender: client_handler::Sender) -> i32 {
         if self.players_map.len() >= self.max_player {
             return -1;
         }
         let pid = self.pid_pool.alloc_id();
-        let new_player = Player::new(pid, stream).await;
+        let new_player = Player::new(pid, receiver, sender);
         self.players_map.insert(pid, new_player);
         pid
     }
@@ -140,8 +156,22 @@ impl PlayerManager for PlayerContainer {
         self.players_map.get(&pid).unwrap().get_action_on_request().await
     }
 
-    async fn response(&self, pid: i32, message: caro_protocol::MessagePacket) {
-        if let Some(player) = self.players_map.get(&pid) {
+    async fn handling_request(&mut self, pid: i32) -> bool {
+        if let Some(player) = self.players_map.get_mut(&pid) {
+            return player.handling_request().await;
+        }
+        false
+    }
+
+    async fn stop_handling_request(&mut self, pid: i32) -> bool {
+        if let Some(player) = self.players_map.get_mut(&pid) {
+            return player.stop_handling_request().await;
+        }
+        false
+    }
+
+    async fn response(&mut self, pid: i32, message: caro_protocol::MessagePacket) {
+        if let Some(player) = self.players_map.get_mut(&pid) {
             player.response(message).await;
         }
     }
