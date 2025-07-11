@@ -6,8 +6,6 @@ use crate::caro_protocol;
 
 pub enum OperationResult {
     Successfully(simple_caro::GameState),
-    RoomNotExist,
-    RoomNotFullYet,
     Player1Left,
     Player2Left,
 }
@@ -160,7 +158,7 @@ impl GameOperator {
         }
     }
 
-    fn execute_command(&mut self, cmd_code: caro_protocol::PlayerCode) -> bool {
+    fn execute_command(&mut self, cmd_code: caro_protocol::PlayerCode) -> OperationResult {
         match cmd_code {
             caro_protocol::PlayerCode::Player1Move((latitude, longtitude)) => {
                 let pos = simple_caro::Coordinate {latitude, longtitude};
@@ -227,10 +225,10 @@ impl GameOperator {
                 // do not process this request
             }
             caro_protocol::PlayerCode::Player1Leave => {
-                return false;
+                return OperationResult::Player1Left;
             }
             caro_protocol::PlayerCode::Player2Leave => {
-                return false;
+                return OperationResult::Player2Left;
             }
             caro_protocol::PlayerCode::RequestRoomAsPlayer1(_game_rule) => {
                 // do not process this request
@@ -239,7 +237,7 @@ impl GameOperator {
                 // do not process this request
             }
         }
-        !self.game.is_over()
+        OperationResult::Successfully(self.game.get_state())
     }
 
     fn get_rid(&self) -> i32 {
@@ -308,7 +306,7 @@ impl GameContainer {
         }
     }
 
-    pub fn execute_command_in_game(&mut self, gid: i32, cmd_code: caro_protocol::PlayerCode) -> Option<bool> {
+    pub fn execute_command_in_game(&mut self, gid: i32, cmd_code: caro_protocol::PlayerCode) -> Option<OperationResult> {
         if let Some(game) = self.games_set.get_mut(&gid) {
             Some(game.execute_command(cmd_code))
         } else {
