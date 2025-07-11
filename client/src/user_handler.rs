@@ -1,5 +1,5 @@
 use crate::caro_protocol;
-use std::io;
+use std::{cmp::min, io};
 
 const SCREEN_WIDTH: usize = 20;
 const SCREEN_HEIGHT: usize = 20;
@@ -27,12 +27,37 @@ pub fn get_command() -> caro_protocol::PlayerCode {
             let rid = words[1].parse().unwrap();
             caro_protocol::PlayerCode::JoinRoomAsPlayer2(rid)
         },
+        "move1" => {
+            let latitude = words[1].parse().unwrap();
+            let longtitude = words[1].parse().unwrap();
+            caro_protocol::PlayerCode::Player1Move((latitude, longtitude))
+        },
+        "move2" => {
+            let latitude = words[1].parse().unwrap();
+            let longtitude = words[1].parse().unwrap();
+            caro_protocol::PlayerCode::Player2Move((latitude, longtitude))
+        },
         _ => caro_protocol::PlayerCode::Player1Leave, // dummy
     }
 }
 
 pub fn print_caro_board(board: Vec<caro_protocol::Row>) {
-    todo!()
+    if board.len() == 0 || board[0].len() == 0 {
+        return;
+    }
+    let max_height = min(board.len(), SCREEN_HEIGHT);
+    let max_width = min(board[0].len(), SCREEN_WIDTH);
+    for row in &board[..max_height] {
+        print!("[");
+        for tile in &row[..max_width] {
+            match tile {
+                caro_protocol::TileState::Empty => print!(" ."),
+                caro_protocol::TileState::Player1 => print!(" X"),
+                caro_protocol::TileState::Player2 => print!(" O"),
+            }
+        }
+        println!("]");
+    }
 }
 
 pub fn print_notification(message: &str) {

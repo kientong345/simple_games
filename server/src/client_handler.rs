@@ -2,7 +2,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::Mutex;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
 use futures::future::BoxFuture;
 use tokio::task::JoinHandle;
 
