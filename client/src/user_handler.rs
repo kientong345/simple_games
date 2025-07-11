@@ -29,15 +29,15 @@ pub fn get_command() -> caro_protocol::PlayerCode {
         },
         "move1" => {
             let latitude = words[1].parse().unwrap();
-            let longtitude = words[1].parse().unwrap();
+            let longtitude = words[2].parse().unwrap();
             caro_protocol::PlayerCode::Player1Move((latitude, longtitude))
         },
         "move2" => {
             let latitude = words[1].parse().unwrap();
-            let longtitude = words[1].parse().unwrap();
+            let longtitude = words[2].parse().unwrap();
             caro_protocol::PlayerCode::Player2Move((latitude, longtitude))
         },
-        _ => caro_protocol::PlayerCode::Player1Leave, // dummy
+        _ => caro_protocol::PlayerCode::Player1RequestContext, // dummy
     }
 }
 
