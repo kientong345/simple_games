@@ -74,6 +74,8 @@ pub enum PlayerCode {
     PlayerUndo,
     PlayerRedo,
     PlayerRequestContext,
+    // global
+    PlayerRequestState,
     PlayerLeaveRoom,
     PlayerExitApplication,
 }
@@ -90,6 +92,8 @@ pub enum ServerCode {
     MoveSuccess,
     MoveUnsuccess,
     Context(GameContext),
+    // global
+    State(PlayerState),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
