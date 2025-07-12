@@ -42,6 +42,10 @@ impl GameRoom {
         self.player1_id != -1 && self.player2_id != -1
     }
 
+    fn is_empty(&self) -> bool {
+        self.player1_id == -1 && self.player2_id == -1
+    }
+
     fn add_player(&mut self, player: PlayerOrder) {
         match player {
             PlayerOrder::Player1(pid) => self.player1_id = pid,
@@ -49,10 +53,13 @@ impl GameRoom {
         }
     }
 
-    fn remove_player(&mut self, player: PlayerOrder) {
-        match player {
-            PlayerOrder::Player1(_) => self.player1_id = -1,
-            PlayerOrder::Player2(_) => self.player2_id = -1,
+    fn remove_player(&mut self, pid: i32) {
+        if self.player1_id == pid {
+            self.player1_id = -1;
+        } else if self.player2_id == pid {
+            self.player2_id = -1;
+        } else {
+
         }
     }
 
@@ -106,9 +113,9 @@ impl RoomContainer {
         }
     }
 
-    pub fn remove_player_from_room(&mut self, rid: i32, player: PlayerOrder) -> bool {
+    pub fn remove_player_from_room(&mut self, rid: i32, pid: i32) -> bool {
         if let Some(room) = self.rooms_set.get_mut(&rid) {
-            room.remove_player(player);
+            room.remove_player(pid);
             true
         } else {
             false
@@ -134,6 +141,14 @@ impl RoomContainer {
     pub fn room_full(&self, rid: i32) -> bool {
         if let Some(room) = self.rooms_set.get(&rid) {
             room.is_full()
+        } else {
+            false
+        }
+    }
+
+    pub fn room_empty(&self, rid: i32) -> bool {
+        if let Some(room) = self.rooms_set.get(&rid) {
+            room.is_empty()
         } else {
             false
         }

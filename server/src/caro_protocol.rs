@@ -44,6 +44,12 @@ pub enum PlayerState {
     InGame(ConnectState),
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum PlayerOrder {
+    Player1,
+    Player2,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameContext {
     pub board_height: usize,
@@ -53,26 +59,23 @@ pub struct GameContext {
     pub player1_undone_moves: Vec<Coordinate>,
     pub player2_undone_moves: Vec<Coordinate>,
     pub game_state: GameState,
-    pub player1_state: PlayerState,
-    pub player2_state: PlayerState,
+    pub player1_connection_state: ConnectState,
+    pub player2_connection_state: ConnectState,
+    pub receiver_order: PlayerOrder,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayerCode {
     // pregame
     RequestRoomAsPlayer1(GameRule),
-    JoinRoomAsPlayer2(RoomId),
+    JoinRoom(RoomId),
     // ingame
-    Player1Move(Coordinate),
-    Player2Move(Coordinate),
-    Player1Undo,
-    Player2Undo,
-    Player1Redo,
-    Player2Redo,
-    Player1RequestContext,
-    Player2RequestContext,
-    Player1Leave,
-    Player2Leave,
+    PlayerMove(Coordinate),
+    PlayerUndo,
+    PlayerRedo,
+    PlayerRequestContext,
+    PlayerLeaveRoom,
+    PlayerExitApplication,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

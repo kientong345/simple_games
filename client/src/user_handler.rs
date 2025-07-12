@@ -25,19 +25,14 @@ pub fn get_command() -> caro_protocol::PlayerCode {
         },
         "cdroom" => {
             let rid = words[1].parse().unwrap();
-            caro_protocol::PlayerCode::JoinRoomAsPlayer2(rid)
+            caro_protocol::PlayerCode::JoinRoom(rid)
         },
-        "move1" => {
+        "move" => {
             let latitude = words[1].parse().unwrap();
             let longtitude = words[2].parse().unwrap();
-            caro_protocol::PlayerCode::Player1Move((latitude, longtitude))
+            caro_protocol::PlayerCode::PlayerMove((latitude, longtitude))
         },
-        "move2" => {
-            let latitude = words[1].parse().unwrap();
-            let longtitude = words[2].parse().unwrap();
-            caro_protocol::PlayerCode::Player2Move((latitude, longtitude))
-        },
-        _ => caro_protocol::PlayerCode::Player1RequestContext, // dummy
+        _ => caro_protocol::PlayerCode::PlayerRequestContext, // dummy
     }
 }
 

@@ -6,8 +6,7 @@ use crate::caro_protocol;
 
 pub enum OperationResult {
     Successfully(simple_caro::GameState),
-    Player1Left,
-    Player2Left,
+    Unsuccessfully(simple_caro::GameState),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -16,7 +15,8 @@ enum GameAvailability {
     Started,
 }
 
-enum PlayerOrder {
+#[derive(Debug, Clone, Copy)]
+pub enum PlayerOrder {
     Player1,
     Player2,
 }
@@ -167,86 +167,58 @@ impl GameOperator {
         }
     }
 
-    fn execute_command(&mut self, cmd_code: caro_protocol::PlayerCode) -> OperationResult {
+    fn execute_command(&mut self, player_order: PlayerOrder, cmd_code: caro_protocol::PlayerCode) -> OperationResult {
+        let mut is_success = false;
+        let who = match player_order {
+            PlayerOrder::Player1 => simple_caro::Participant::Player1,
+            PlayerOrder::Player2 => simple_caro::Participant::Player2,
+        };
         match cmd_code {
-            caro_protocol::PlayerCode::Player1Move((latitude, longtitude)) => {
+            caro_protocol::PlayerCode::PlayerMove((latitude, longtitude)) => {
                 let pos = simple_caro::Coordinate {latitude, longtitude};
-                let result = self.game.player_move(simple_caro::Participant::Player1, pos);
+                let result = self.game.player_move(who, pos);
                 match result {
                     simple_caro::MoveResult::Success => {
                         self.game.switch_turn();
+                        is_success = true;
                     }
                     _ => {
+                        is_success = false;
                     }
                 }
             }
-            caro_protocol::PlayerCode::Player2Move((latitude, longtitude)) => {
-                let pos = simple_caro::Coordinate {latitude, longtitude};
-                let result = self.game.player_move(simple_caro::Participant::Player2, pos);
+            caro_protocol::PlayerCode::PlayerUndo => {
+                let result = self.game.player_undo(who);
                 match result {
                     simple_caro::MoveResult::Success => {
-                        self.game.switch_turn();
+                        is_success = true;
                     }
                     _ => {
+                        is_success = false;
                     }
                 }
             }
-            caro_protocol::PlayerCode::Player1Undo => {
-                let result = self.game.player_undo(simple_caro::Participant::Player1);
+            caro_protocol::PlayerCode::PlayerRedo => {
+                let result = self.game.player_redo(who);
                 match result {
                     simple_caro::MoveResult::Success => {
+                        is_success = true;
                     }
                     _ => {
+                        is_success = false;
                     }
                 }
             }
-            caro_protocol::PlayerCode::Player2Undo => {
-                let result = self.game.player_undo(simple_caro::Participant::Player2);
-                match result {
-                    simple_caro::MoveResult::Success => {
-                    }
-                    _ => {
-                    }
-                }
-            }
-            caro_protocol::PlayerCode::Player1Redo => {
-                let result = self.game.player_redo(simple_caro::Participant::Player1);
-                match result {
-                    simple_caro::MoveResult::Success => {
-                    }
-                    _ => {
-                    }
-                }
-            }
-            caro_protocol::PlayerCode::Player2Redo => {
-                let result = self.game.player_redo(simple_caro::Participant::Player2);
-                match result {
-                    simple_caro::MoveResult::Success => {
-                    }
-                    _ => {
-                    }
-                }
-            }
-            caro_protocol::PlayerCode::Player1RequestContext => {
-                // do not process this request
-            }
-            caro_protocol::PlayerCode::Player2RequestContext => {
-                // do not process this request
-            }
-            caro_protocol::PlayerCode::Player1Leave => {
-                return OperationResult::Player1Left;
-            }
-            caro_protocol::PlayerCode::Player2Leave => {
-                return OperationResult::Player2Left;
-            }
-            caro_protocol::PlayerCode::RequestRoomAsPlayer1(_game_rule) => {
-                // do not process this request
-            }
-            caro_protocol::PlayerCode::JoinRoomAsPlayer2(_rid) => {
-                // do not process this request
+            _ => {
+                // do not process other requests
             }
         }
-        OperationResult::Successfully(self.game.get_state())
+        
+        if is_success {
+            OperationResult::Successfully(self.game.get_state())
+        } else {
+            OperationResult::Unsuccessfully(self.game.get_state())
+        }
     }
 
     fn get_rid(&self) -> i32 {
@@ -316,9 +288,9 @@ impl GameContainer {
         }
     }
 
-    pub fn execute_command_in_game(&mut self, gid: i32, cmd_code: caro_protocol::PlayerCode) -> Option<OperationResult> {
+    pub fn execute_command_in_game(&mut self, gid: i32, player_order: PlayerOrder, cmd_code: caro_protocol::PlayerCode) -> Option<OperationResult> {
         if let Some(game) = self.games_set.get_mut(&gid) {
-            Some(game.execute_command(cmd_code))
+            Some(game.execute_command(player_order, cmd_code))
         } else {
             None
         }
