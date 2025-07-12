@@ -22,7 +22,8 @@ enum PlayerOrder {
 }
 
 pub struct InternalGameContext {
-    pub board: Vec<caro_protocol::Row>,
+    pub board_height: usize,
+    pub board_width: usize,
     pub player1_move_history: Vec<caro_protocol::Coordinate>,
     pub player2_move_history: Vec<caro_protocol::Coordinate>,
     pub player1_undone_moves: Vec<caro_protocol::Coordinate>,
@@ -91,6 +92,14 @@ impl GameOperator {
             caro_protocol::GameState::Drew => GameAvailability::Pending,
             caro_protocol::GameState::NotInprogress => GameAvailability::Pending,
         }
+    }
+
+    fn get_board_height(&self) -> usize {
+        self.game.get_board_height()
+    }
+
+    fn get_board_width(&self) -> usize {
+        self.game.get_board_width()
     }
 
     fn get_board(&self) -> Vec<caro_protocol::Row> {
@@ -294,7 +303,8 @@ impl GameContainer {
     pub fn get_context_in_game(&self, gid: i32) -> Option<InternalGameContext> {
         if let Some(game) = self.games_set.get(&gid) {
             Some(InternalGameContext {
-                board: game.get_board(),
+                board_height: game.get_board_height(),
+                board_width: game.get_board_width(),
                 player1_move_history: game.get_player_move_history(PlayerOrder::Player1),
                 player2_move_history: game.get_player_move_history(PlayerOrder::Player2),
                 player1_undone_moves: game.get_player_undone_moves(PlayerOrder::Player1),

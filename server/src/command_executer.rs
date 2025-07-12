@@ -153,7 +153,8 @@ impl CommandExecuter {
             }
         };
         let game_context = caro_protocol::GameContext {
-            board: internal_game_context.board,
+            board_height: internal_game_context.board_height,
+            board_width: internal_game_context.board_width,
             player1_move_history: internal_game_context.player1_move_history,
             player2_move_history: internal_game_context.player2_move_history,
             player1_undone_moves: internal_game_context.player1_undone_moves,

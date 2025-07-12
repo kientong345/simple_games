@@ -46,7 +46,8 @@ pub enum PlayerState {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameContext {
-    pub board: Vec<Row>,
+    pub board_height: usize,
+    pub board_width: usize,
     pub player1_move_history: Vec<Coordinate>,
     pub player2_move_history: Vec<Coordinate>,
     pub player1_undone_moves: Vec<Coordinate>,

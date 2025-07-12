@@ -73,9 +73,7 @@ async fn main() {
 
                 },
                 caro_protocol::GenericCode::Server(caro_protocol::ServerCode::Context(game_context)) => {
-                    println!("get board");
-                    let caro_board = game_context.board;
-                    user_handler::print_caro_board(caro_board);
+                    user_handler::print_caro_context(game_context);
                 },
                 _ => (),
             }
