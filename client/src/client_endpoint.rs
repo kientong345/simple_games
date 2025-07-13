@@ -13,7 +13,7 @@ pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(caro_protocol::MessageP
 pub type ResponseHandler = JoinHandle<()>;
 
 #[macro_export]
-macro_rules! make_action {
+macro_rules! make_response_action {
     ($action:expr) => {
         Arc::new(tokio::sync::Mutex::new($action)) as crate::client_endpoint::HandleAction
     };
@@ -76,7 +76,7 @@ pub struct ResponseGetter {
 
 impl ResponseGetter {
     pub fn new(receiver: Receiver) -> Self {
-        let action = make_action!(|_msg: caro_protocol::MessagePacket| {
+        let action = make_response_action!(|_msg: caro_protocol::MessagePacket| {
             let future = async move {
             };
             Box::pin(future) as BoxFuture<'static, ()>
@@ -107,7 +107,6 @@ impl ResponseGetter {
                     }
                     let msg = msg.to_message_packet();
                     tokio::spawn(target.lock().await.action.lock().await(msg));
-                    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                 }
             }
         )
