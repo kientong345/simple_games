@@ -15,7 +15,7 @@ pub type ResponseHandler = JoinHandle<()>;
 #[macro_export]
 macro_rules! make_action {
     ($action:expr) => {
-        Arc::new(tokio::sync::Mutex::new($action)) as crate::client_handler::HandleAction
+        Arc::new(tokio::sync::Mutex::new($action)) as crate::server_endpoint::HandleAction
     };
 }
 

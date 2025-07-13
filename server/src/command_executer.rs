@@ -2,7 +2,12 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{caro_protocol, game_manager, player_manager::{self, PlayerManager}, room_manager};
+use crate::{
+    caro_protocol,
+    game_manager,
+    player_manager::{self, PlayerManager},
+    room_manager
+};
 
 pub struct CommandExecuter {
     player_manager: Arc<Mutex<player_manager::PlayerContainer>>,

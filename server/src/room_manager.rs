@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    id_pool, caro_protocol
+    id_pool,
+    caro_protocol
 };
 
 #[derive(Debug, Clone, Copy)]

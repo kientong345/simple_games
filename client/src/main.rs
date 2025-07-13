@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use caro_client::{caro_protocol::{self, MessagePacket}, client_state, make_action, server_handler::{self, Requester, ResponseGetter}, user_handler};
+use caro_client::{caro_protocol::{self, MessagePacket}, client_state, command_getter, displayer, make_action, client_endpoint::{self, Requester, ResponseGetter}};
 use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
     let global_state = Arc::new(Mutex::new(client_state::ClientState::new()));
 
-    let (receiver, sender) = server_handler::connect_to(caro_protocol::SERVER_ADDRESS).await;
+    let (receiver, sender) = client_endpoint::connect_to(caro_protocol::SERVER_ADDRESS).await;
 
     let requester = Arc::new(Mutex::new(Requester::new(sender)));
     let response_getter = Arc::new(Mutex::new(ResponseGetter::new(receiver)));
@@ -26,8 +26,8 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            user_handler::print_notification("JoinedRoomAsPlayer1 in room:");
-                            user_handler::print_notification(&rid.to_string());
+                            displayer::print_notification("JoinedRoomAsPlayer1 in room:");
+                            displayer::print_notification(&rid.to_string());
                         },
                         caro_protocol::ConnectState::Disconnected => {
                         },
@@ -39,8 +39,8 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            user_handler::print_notification("JoinedRoomAsPlayer2 in room:");
-                            user_handler::print_notification(&rid.to_string());
+                            displayer::print_notification("JoinedRoomAsPlayer2 in room:");
+                            displayer::print_notification(&rid.to_string());
                         },
                         caro_protocol::ConnectState::Disconnected => {
 
@@ -59,7 +59,7 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            user_handler::print_notification("game is ready!");
+                            displayer::print_notification("game is ready!");
                         },
                         caro_protocol::ConnectState::Disconnected => {
 
@@ -73,7 +73,7 @@ async fn main() {
 
                 },
                 caro_protocol::GenericCode::Server(caro_protocol::ServerCode::Context(game_context)) => {
-                    user_handler::print_caro_context(game_context);
+                    displayer::print_caro_context(game_context);
                 },
                 _ => (),
             }
@@ -84,7 +84,7 @@ async fn main() {
     ResponseGetter::handling_response(response_getter).await;
 
     loop {
-        let code = user_handler::get_command();
+        let code = command_getter::get_command();
         let new_packet = MessagePacket::new_player_packet(code);
         println!("send: {:?}", new_packet);
         requester.lock().await.send_request(new_packet).await;

@@ -2,7 +2,14 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use simple_caro_app::{
-    caro_protocol, client_handler, command_executer, game_manager, id_pool, make_action, player_manager::{self, PlayerManager}, room_manager
+    caro_protocol,
+    server_endpoint,
+    command_executer,
+    game_manager,
+    id_pool,
+    make_action,
+    player_manager::{self, PlayerManager},
+    room_manager
 };
 
 #[tokio::main]
@@ -20,7 +27,7 @@ async fn main() {
 
     // let mut player_tracker = PlayerTracker::new(player_manager.clone());
 
-    let mut listener = client_handler::Listener::new(caro_protocol::SERVER_ADDRESS).await;
+    let mut listener = server_endpoint::Listener::new(caro_protocol::SERVER_ADDRESS).await;
 
     while let (receiver, sender) = listener.accept().await {
         let new_pid = player_manager.lock().await.add_player(receiver, sender);
