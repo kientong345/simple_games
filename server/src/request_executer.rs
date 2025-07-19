@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 use crate::{
     caro_protocol,
     game_manager,
-    player_manager::{self, PlayerManager},
+    player_manager,
     room_manager
 };
 
@@ -106,8 +106,16 @@ impl CommandExecuter {
             player_manager_clone.lock().await.response(pid1, new_packet.clone()).await;
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
             player_manager_clone.lock().await.response(pid2, new_packet).await;
+
             player_manager_clone.lock().await.set_player_state(pid1, player_manager::PlayerState::InGame(player_manager::ConnectState::Connected));
             player_manager_clone.lock().await.set_player_state(pid2, player_manager::PlayerState::InGame(player_manager::ConnectState::Connected));
+
+            // let code = caro_protocol::ServerCode::State(caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected));
+            // let new_message_packet = caro_protocol::MessagePacket::new_server_packet(code);
+            // tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            // player_manager_clone.lock().await.response(pid1, new_message_packet.clone()).await;
+            // tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            // player_manager_clone.lock().await.response(pid2, new_message_packet).await;
         };
 
         match code {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-pub mod simple_caro;
+use simple_caro;
 
 use crate::id_pool;
 use crate::caro_protocol;

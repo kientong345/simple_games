@@ -16,11 +16,15 @@ pub enum GameRule {
 pub enum UserCommand {
     RequestNewRoom(GameRule),
     JoinRoom(i32),
+    LeaveRoom,
+    ExitApplication,
     Move(Coordinate),
     Up,
     Down,
     Left,
     Right,
+    Undo,
+    Redo,
     Invalid,
 }
 

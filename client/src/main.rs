@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use caro_client::{caro_protocol::{self, MessagePacket}, client_endpoint::{self, Requester, ResponseGetter}, client_state, command_getter, displayer, make_input_action, make_response_action};
+use caro_client::{caro_protocol::{self, MessagePacket}, client_endpoint::{self, Requester, ResponseGetter}, client_state, command_getter, screen_manager, make_input_action, make_response_action};
 use tokio::sync::Mutex;
 
 #[tokio::main]
@@ -26,8 +26,8 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            displayer::print_notification("JoinedRoomAsPlayer1 in room:");
-                            displayer::print_notification(&rid.to_string());
+                            screen_manager::print_notification("JoinedRoomAsPlayer1 in room:");
+                            screen_manager::print_notification(&rid.to_string());
                         },
                         caro_protocol::ConnectState::Disconnected => {
                         },
@@ -39,8 +39,8 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            displayer::print_notification("JoinedRoomAsPlayer2 in room:");
-                            displayer::print_notification(&rid.to_string());
+                            screen_manager::print_notification("JoinedRoomAsPlayer2 in room:");
+                            screen_manager::print_notification(&rid.to_string());
                         },
                         caro_protocol::ConnectState::Disconnected => {
 
@@ -59,7 +59,7 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            displayer::print_notification("game is ready!");
+                            screen_manager::print_notification("game is ready!");
                         },
                         caro_protocol::ConnectState::Disconnected => {
 
@@ -73,7 +73,7 @@ async fn main() {
 
                 },
                 caro_protocol::GenericCode::Server(caro_protocol::ServerCode::Context(game_context)) => {
-                    displayer::print_caro_context(game_context);
+                    screen_manager::print_caro_context(game_context);
                 },
                 _ => (),
             }

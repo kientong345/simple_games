@@ -1,6 +1,6 @@
 pub use std::{cell::RefCell, rc::Rc};
 
-include!("../../lib/Simple_Caro.rs");
+include!("../lib/Simple_Caro.rs");
 
 #[derive(Debug, Clone)]
 pub struct Coordinate {

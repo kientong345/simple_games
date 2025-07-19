@@ -121,7 +121,6 @@ impl RequestGetter {
                     println!("recv {:?}", msg);
                     let msg = msg.to_message_packet();
                     tokio::spawn(target.lock().await.action.lock().await(msg));
-                    // tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                 }
             }
         )

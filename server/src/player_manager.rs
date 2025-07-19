@@ -62,6 +62,7 @@ impl Player {
     }
 
     async fn response(&mut self, message: caro_protocol::MessagePacket) {
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await; // avoid bombarding the client with messages
         self.responser.send_response(message).await;
     }
 
@@ -92,20 +93,6 @@ impl Player {
     }
 }
 
-pub trait PlayerManager {
-    fn add_player(&mut self, receiver: server_endpoint::Receiver, sender: server_endpoint::Sender) -> i32;
-    fn remove_player(&mut self, pid: i32);
-    fn set_player_state(&mut self, pid: i32, state: PlayerState);
-    fn get_player_state(&self, pid: i32) -> Option<PlayerState>;
-    async fn set_action_on_request(&mut self, pid: i32, action: server_endpoint::HandleAction);
-    async fn get_action_on_request(&self, pid: i32) -> server_endpoint::HandleAction;
-    async fn handling_request(&mut self, pid: i32) -> bool;
-    async fn stop_handling_request(&mut self, pid: i32) -> bool;
-    async fn response(&mut self, pid: i32, message: caro_protocol::MessagePacket);
-    fn check_alive(&self, pid: i32) -> bool;
-    fn player_exist(&self, pid: i32) -> bool;
-}
-
 pub struct PlayerContainer {
     players_map: HashMap<i32, Player>,
     max_player: usize,
@@ -122,8 +109,8 @@ impl PlayerContainer {
     }
 }
 
-impl PlayerManager for PlayerContainer {
-    fn add_player(&mut self, receiver: server_endpoint::Receiver, sender: server_endpoint::Sender) -> i32 {
+impl PlayerContainer {
+    pub fn add_player(&mut self, receiver: server_endpoint::Receiver, sender: server_endpoint::Sender) -> i32 {
         if self.players_map.len() >= self.max_player {
             return -1;
         }
@@ -133,52 +120,52 @@ impl PlayerManager for PlayerContainer {
         pid
     }
 
-    fn remove_player(&mut self, pid: i32) {
+    pub fn remove_player(&mut self, pid: i32) {
         self.pid_pool.dealloc_id(pid);
         self.players_map.remove(&pid);
     }
 
-    fn set_player_state(&mut self, pid: i32, state: PlayerState) {
+    pub fn set_player_state(&mut self, pid: i32, state: PlayerState) {
         if let Some(player) = self.players_map.get_mut(&pid) {
             player.set_state(state);
         }
     }
 
-    fn get_player_state(&self, pid: i32) -> Option<PlayerState> {
+    pub fn get_player_state(&self, pid: i32) -> Option<PlayerState> {
         self.players_map.get(&pid).map(|p| p.get_state())
     }
 
-    async fn set_action_on_request(&mut self, pid: i32, action: server_endpoint::HandleAction) {
+    pub async fn set_action_on_request(&mut self, pid: i32, action: server_endpoint::HandleAction) {
         if let Some(player) = self.players_map.get_mut(&pid) {
             player.set_action_on_request(action).await;
         }
     }
 
-    async fn get_action_on_request(&self, pid: i32) -> server_endpoint::HandleAction {
+    pub async fn get_action_on_request(&self, pid: i32) -> server_endpoint::HandleAction {
         self.players_map.get(&pid).unwrap().get_action_on_request().await
     }
 
-    async fn handling_request(&mut self, pid: i32) -> bool {
+    pub async fn handling_request(&mut self, pid: i32) -> bool {
         if let Some(player) = self.players_map.get_mut(&pid) {
             return player.handling_request().await;
         }
         false
     }
 
-    async fn stop_handling_request(&mut self, pid: i32) -> bool {
+    pub async fn stop_handling_request(&mut self, pid: i32) -> bool {
         if let Some(player) = self.players_map.get_mut(&pid) {
             return player.stop_handling_request().await;
         }
         false
     }
 
-    async fn response(&mut self, pid: i32, message: caro_protocol::MessagePacket) {
+    pub async fn response(&mut self, pid: i32, message: caro_protocol::MessagePacket) {
         if let Some(player) = self.players_map.get_mut(&pid) {
             player.response(message).await;
         }
     }
 
-    fn check_alive(&self, pid: i32) -> bool {
+    pub fn check_alive(&self, pid: i32) -> bool {
         if let Some(player) = self.players_map.get(&pid) {
             player.check_alive()
         } else {
@@ -186,7 +173,7 @@ impl PlayerManager for PlayerContainer {
         }
     }
 
-    fn player_exist(&self, pid: i32) -> bool {
+    pub fn player_exist(&self, pid: i32) -> bool {
         self.players_map.contains_key(&pid)
     }
 }
