@@ -6,8 +6,6 @@ pub mod entities_factory;
 pub mod menu_entities;
 pub mod room_entities;
 pub mod game_entities;
-pub mod cli_tools;
-pub mod artworks;
 
 const SCREEN_WIDTH: usize = 10;
 const SCREEN_HEIGHT: usize = 10;
