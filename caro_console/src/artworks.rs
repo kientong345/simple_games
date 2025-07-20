@@ -69,6 +69,14 @@ impl ArtDimension for String {
     }
 }
 
+pub const TILE_WIDTH: usize = 4;
+pub const TILE_HEIGHT: usize = 2;
+pub const CARO_TILE: &'static str = concat!(
+"+---+\n",
+"|   |\n",
+"+---+\n"
+);
+
 pub const MENU_INSTRUCTION: &'static str = concat!(
 "              Instructions              \n",
 "========================================\n",

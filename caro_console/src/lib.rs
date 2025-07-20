@@ -6,6 +6,7 @@ use ratatui;
 use crate::artworks::ArtDimension;
 
 pub mod artworks;
+pub mod caro_art_tools;
 
 pub type Height = usize;
 pub type Width = usize;
@@ -167,30 +168,3 @@ pub fn draw_at(entity: DrawableBox, latitude: i64, longtutude: i64) {
         latitude += 1;
     }
 }
-
-// pub fn get_empty_drawable_caro_board(height: Height, width: Width) -> DrawableBox {
-//     // Simple ASCII grid: '+' corners, '-' top/bottom, '|' sides, ' ' inside
-//     let mut art = String::new();
-//     for h in 0..height {
-//         for w in 0..width {
-//             let ch = if (h == 0 || h == height - 1) && (w == 0 || w == width - 1) {
-//                 '+'
-//             } else if h == 0 || h == height - 1 {
-//                 '-'
-//             } else if w == 0 || w == width - 1 {
-//                 '|'
-//             } else {
-//                 ' '
-//             };
-//             art.push(ch);
-//         }
-//         art.push('\n');
-//     }
-//     // Leak the string to get a &'static str (for demo, not ideal for production)
-//     let static_art: &'static str = Box::leak(art.into_boxed_str());
-//     DrawableBox {
-//         dimension: (height, width),
-//         offset: (1, 1),
-//         art: static_art,
-//     }
-// }
