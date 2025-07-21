@@ -2,7 +2,7 @@
 
 use std::usize;
 
-use crate::DrawableBox;
+use crate::output::DrawableBox;
 use crate::artworks;
 
 pub type VerticalRange = (usize, usize);
@@ -10,15 +10,17 @@ pub type HorizontalRange = (usize, usize);
 
 pub type Coordinate = (usize, usize);
 
-pub struct Cursor {
-	pub coordinate_on_board: (i32, i32),
-	pub coordinate_on_screen: (i32, i32),
+#[derive(Debug, Clone, Copy)]
+pub struct BoardPosition {
+    pub base: Coordinate,
+    pub vertical_range: VerticalRange,
+    pub horizontal_range: HorizontalRange,
 }
 
-pub fn get_drawable_coordinate_layout(vertical_range: VerticalRange, horizontal_range: HorizontalRange)
--> DrawableBox {
-    let num_cols = horizontal_range.1 - horizontal_range.0 + 1;
-    let num_rows = vertical_range.1 - vertical_range.0 + 1;
+pub fn get_drawable_coordinate_layout(board_position: &BoardPosition)
+-> Vec<DrawableBox> {
+    let num_cols = board_position.horizontal_range.1 - board_position.horizontal_range.0 + 1;
+    let num_rows = board_position.vertical_range.1 - board_position.vertical_range.0 + 1;
     let max_width = artworks::TILE_WIDTH + num_cols * artworks::TILE_WIDTH;
     let max_height = artworks::TILE_HEIGHT + num_rows * artworks::TILE_HEIGHT;
     let estimated_capacity = max_width * max_height + max_height;
@@ -26,7 +28,7 @@ pub fn get_drawable_coordinate_layout(vertical_range: VerticalRange, horizontal_
     let mut x_axis_line = String::with_capacity(max_width);
     x_axis_line.push_str(&" ".repeat(artworks::TILE_WIDTH));
 
-    for longitude in horizontal_range.0..=horizontal_range.1 {
+    for longitude in board_position.horizontal_range.0..= board_position.horizontal_range.1 {
         let s = longitude.to_string();
         let digit_num = s.len();
         let front_align_len = (artworks::TILE_WIDTH - digit_num) / 2;
@@ -43,7 +45,7 @@ pub fn get_drawable_coordinate_layout(vertical_range: VerticalRange, horizontal_
         art.push('\n');
     }
 
-    for latitude in vertical_range.0..=vertical_range.1 {
+    for latitude in board_position.vertical_range.0..= board_position.vertical_range.1 {
         let s = latitude.to_string();
         let digit_num = s.len();
         // this code suck, if you try to read it, then get the fk up
@@ -71,166 +73,94 @@ pub fn get_drawable_coordinate_layout(vertical_range: VerticalRange, horizontal_
         }
     }
 
-    DrawableBox {
+    let layout = DrawableBox {
+        coordinate: (board_position.base.0, board_position.base.1),
         constraint: (max_height, max_width),
         offset: (0, 0),
         show_boundary_line: false,
         art,
+    };
+
+    // Build tile net
+    let mut tile_net_art = String::with_capacity(estimated_capacity);
+    let odd_line = format!("+{}+\n", "---+".repeat(num_cols));
+    let even_line = format!("|{}|\n", "   |".repeat(num_cols));
+    
+    tile_net_art.push_str(&odd_line);
+    for _ in 0..num_rows {
+        tile_net_art.push_str(&even_line);
+        tile_net_art.push_str(&odd_line);
+    }
+
+    let tile_net = DrawableBox {
+        coordinate: (board_position.base.0+2, board_position.base.1+5),
+        constraint: (max_height-1-artworks::TILE_HEIGHT, max_width-1-artworks::TILE_WIDTH),
+        offset: (1, 1),
+        show_boundary_line: true,
+        art: tile_net_art,
+    };
+
+    vec![layout, tile_net]
+}
+
+fn board_to_screen_coordinate(board_position: &BoardPosition, board_coordinate: Coordinate)
+-> Coordinate {
+    (
+        board_position.base.0 + (board_coordinate.0-board_position.vertical_range.0+1)*artworks::TILE_HEIGHT - 1,
+        board_position.base.1 + (board_coordinate.1-board_position.horizontal_range.0+1)*artworks::TILE_WIDTH,
+    )
+}
+
+pub fn get_drawable_cursor(board_position: &BoardPosition, board_coordinate: Coordinate)
+-> DrawableBox {
+    let coordinate = board_to_screen_coordinate(board_position, board_coordinate);
+    DrawableBox {
+        coordinate,
+        constraint: (artworks::TILE_HEIGHT+1, artworks::TILE_WIDTH+1),
+        offset: (0, 0),
+        show_boundary_line: false,
+        art: artworks::CARO_TILE.to_string(),
     }
 }
 
-pub fn get_drawable_caro_board(
-    player1_moves: Vec<Coordinate>, player2_moves: Vec<Coordinate>,
-    vertical_range: VerticalRange, horizontal_range: HorizontalRange)
--> DrawableBox {
-    // let num_cols = horizontal_range.1 - horizontal_range.0 + 1;
-    // let num_rows = vertical_range.1 - vertical_range.0 + 1;
-    // let max_width = num_cols * artworks::TILE_WIDTH;
-    // let max_height = num_rows * artworks::TILE_HEIGHT;
-    // let mut art = String::new();
-
-    // let mut odd_line = String::new();
-    // odd_line.push('+');
-    // odd_line.push_str(&"---+".repeat(num_cols));
-    // odd_line.push('\n');
-    // let mut even_line = String::new();
-    // even_line.push('|');
-    // even_line.push_str(&"   |".repeat(num_cols));
-    // even_line.push('\n');
-
-    // art.push_str(&odd_line);
-    // for _ in 0..num_rows {
-    //     art.push_str(&even_line);
-    //     art.push_str(&odd_line);
-    // }
-
-    // let get_pos_from_caro_pos = |coor: Coordinate| -> usize {
-    //     todo!()
-    // };
-
-    // for coor in player1_moves {
-    //     art.get(get_pos_from_caro_pos(coor)) = 'X';
-    // }
-    // for coor in player2_moves {
-    //     art.get(get_pos_from_caro_pos(coor)) = 'O';
-    // }
-
-    // DrawableBox {
-    //     constraint: (max_height-1, max_width-1),
-    //     offset: (1, 1),
-    //     show_boundary_line: true,
-    //     art,
-    // }
-
-    let num_cols = horizontal_range.1 - horizontal_range.0 + 1;
-    let num_rows = vertical_range.1 - vertical_range.0 + 1;
-
-    // Calculate actual dimensions of the drawn board
-    // Each column is TILE_WIDTH characters wide, plus 1 for the rightmost '|' or '+'
-    let board_width_chars = artworks::TILE_WIDTH * num_cols + 1;
-    // Each row is TILE_HEIGHT characters tall, plus 1 for the bottommost '+' line
-    let board_height_lines = artworks::TILE_HEIGHT * num_rows + 1;
-
-    // Create a 2D grid (conceptually) using a Vec<char> to allow easy modification
-    // Each line in the final string will have `board_width_chars` characters + newline
-    let line_len_with_newline = board_width_chars + 1; // +1 for '\n'
-    let mut char_grid: Vec<char> = Vec::with_capacity(board_height_lines * line_len_with_newline);
-
-    // --- 1. Draw the empty grid structure ---
-
-    // Build the horizontal separator line (e.g., "+---+---+")
-    let mut horizontal_sep_line = String::with_capacity(board_width_chars);
-    horizontal_sep_line.push('+');
-    for _ in 0..num_cols {
-        horizontal_sep_line.push_str(&"-".repeat(artworks::TILE_WIDTH-1));
-        horizontal_sep_line.push('+');
-    }
-    horizontal_sep_line.push('\n'); // Add newline here
-
-    // Build the empty content line (e.g., "|   |   |")
-    let mut empty_content_line = String::with_capacity(board_width_chars);
-    empty_content_line.push('|');
-    for _ in 0..num_cols {
-        empty_content_line.push_str(&" ".repeat(artworks::TILE_WIDTH-1));
-        empty_content_line.push('|');
-    }
-    empty_content_line.push('\n'); // Add newline here
-
-    // Append the lines to the char_grid
-    for _ in 0..num_rows {
-        char_grid.extend(horizontal_sep_line.chars());
-        char_grid.extend(empty_content_line.chars());
-    }
-    // Add the final horizontal separator line
-    char_grid.extend(horizontal_sep_line.chars());
-
-
-    // --- 2. Implement get_char_index for mapping Coordinates to char_grid indices ---
-    // This is the core logic for placing X/O.
-    // Given a (row, col) from `player_moves` (0-indexed relative to range start),
-    // calculate its position in the flat `char_grid`.
-
-    let char_grid_len = char_grid.len();
-
-    let get_char_index = |coord: Coordinate| -> Option<usize> {
-        let r = coord.0; // Row index (relative to game board)
-        let c = coord.1; // Column index (relative to game board)
-
-        // Check if coordinate is within the drawing range
-        if r < vertical_range.0 || r > vertical_range.1 ||
-           c < horizontal_range.0 || c > horizontal_range.1 {
-            return None; // Coordinate is outside the drawable range
-        }
-
-        // Adjust coordinates to be 0-indexed relative to the drawn board's top-left corner
-        let drawn_row = r - vertical_range.0;
-        let drawn_col = c - horizontal_range.0;
-
-        // Calculate the starting line index for this row's content
-        // Each full row block (like '+---+\n|   |\n') takes TILE_HEIGHT lines
-        // plus one for the top border.
-        let line_offset = (drawn_row * artworks::TILE_HEIGHT) + 1; // +1 to skip the initial board border
-
-        // Calculate the starting column index for this cell's content
-        // Each column is TILE_WIDTH characters wide ('| X ').
-        // We want the middle of the cell, so +2 from the start of the cell block.
-        // E.g., for "| X |", 'X' is at index 2 (0-indexed).
-        let col_offset = (drawn_col * artworks::TILE_WIDTH) + (artworks::TILE_WIDTH / 2);
-
-        // Calculate the flat index in `char_grid`
-        // (line_index * characters_per_line_including_newline) + column_index_within_line
-        let index = (line_offset * line_len_with_newline) + col_offset;
-
-        // Ensure the calculated index is within the bounds of char_grid
-        if index < char_grid_len {
-            Some(index)
-        } else {
-            None
-        }
-    };
-
-
-    // --- 3. Place player moves onto the grid ---
-
-    for coor in player1_moves {
-        if let Some(idx) = get_char_index(coor) {
-            char_grid[idx] = 'X';
+pub fn get_drawable_x_moves(board_position: &BoardPosition, moves_set: Vec<Coordinate>)
+-> Vec<DrawableBox> {
+    let mut drawable_set = Vec::new();
+    for (latitude, longtitude) in moves_set {
+        if latitude >= board_position.vertical_range.0 && latitude <= board_position.vertical_range.1 &&
+            longtitude >= board_position.horizontal_range.0 && longtitude <= board_position.horizontal_range.1 {
+            let (latitude, longtitude) = board_to_screen_coordinate(board_position, (latitude, longtitude));
+            drawable_set.push(
+                DrawableBox {
+                    coordinate: (latitude+1, longtitude+2),
+                    constraint: (1, 1),
+                    offset: (0, 0),
+                    show_boundary_line: false,
+                    art: artworks::X_SYM.to_string(),
+                }
+            );
         }
     }
-    for coor in player2_moves {
-        if let Some(idx) = get_char_index(coor) {
-            char_grid[idx] = 'O';
+    drawable_set
+}
+
+pub fn get_drawable_o_moves(board_position: &BoardPosition, moves_set: Vec<Coordinate>)
+-> Vec<DrawableBox> {
+    let mut drawable_set = Vec::new();
+    for (latitude, longtitude) in moves_set {
+        if latitude >= board_position.vertical_range.0 && latitude <= board_position.vertical_range.1 &&
+            longtitude >= board_position.horizontal_range.0 && longtitude <= board_position.horizontal_range.1 {
+            let (latitude, longtitude) = board_to_screen_coordinate(board_position, (latitude, longtitude));
+            drawable_set.push(
+                DrawableBox {
+                    coordinate: (latitude+1, longtitude+2),
+                    constraint: (1, 1),
+                    offset: (0, 0),
+                    show_boundary_line: false,
+                    art: artworks::O_SYM.to_string(),
+                }
+            );
         }
     }
-
-    // --- 4. Convert char_grid to String ---
-    let art: String = char_grid.into_iter().collect();
-
-    DrawableBox {
-        // Constraint should reflect the actual generated dimensions
-        constraint: (board_height_lines-2, board_width_chars-2),
-        offset: (1, 1), // Default to (0,0) unless specific offset is needed for drawing context
-        show_boundary_line: true,
-        art,
-    }
+    drawable_set
 }

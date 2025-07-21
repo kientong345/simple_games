@@ -24,7 +24,7 @@ pub struct ScreenManager {
     menu_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
     room_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
     game_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
-    cursor_entity: Option<Box<dyn screen_entity::ScreenEntity>>,
+    board_entities: BoardManager,
     state: ScreenState,
 }
 
@@ -34,14 +34,17 @@ impl ScreenManager {
         let menu_entities_vec = entities_factory.get_screen_entities(entities_factory::ScreenType::Menu);
         let room_entities_vec = entities_factory.get_screen_entities(entities_factory::ScreenType::InRoom);
         let game_entities_vec = entities_factory.get_screen_entities(entities_factory::ScreenType::InGame);
-        let cursor_entity = None;
         Self {
             menu_entities_vec,
             room_entities_vec,
             game_entities_vec,
-            cursor_entity,
+            board_entities: BoardManager::new(),
             state: ScreenState::Menu,
         }
+    }
+
+    pub fn clean(&self) {
+        caro_console::output::clean_screen();
     }
 
     pub fn set_state(&mut self, state: ScreenState) {
@@ -52,33 +55,24 @@ impl ScreenManager {
         self.state
     }
 
-    pub fn show_cursor(&mut self) {
-        let entities_factory = entities_factory::EntitiesFactory::new();
-        if self.cursor_entity.is_none() {
-            self.cursor_entity = Some(entities_factory.get_cursor());
-        }
+    pub fn enable_prompt_mode_at(&mut self, latitude: Latitude, longtitude: Longtitude) {
+        caro_console::output::enable_prompt_mode_at(latitude as usize, longtitude as usize);
     }
 
-    pub fn hide_cursor(&mut self) {
-        self.cursor_entity = None;
+    pub fn disable_prompt_mode(&mut self) {
+        caro_console::output::disable_prompt_mode();
     }
 
     pub fn set_cursor_pos(&mut self, latitude: Latitude, longtitude: Longtitude) {
-        if let Some(cursor) = self.cursor_entity.as_mut() {
-            cursor.set_position(latitude, longtitude);
-        }
+        self.board_entities.set_cursor_pos(latitude, longtitude);
     }
 
-    pub fn get_cursor_pos(&self) -> Option<(Latitude, Longtitude)> {
-        if let Some(cursor) = self.cursor_entity.as_ref() {
-            Some(cursor.get_position())
-        } else {
-            None
-        }
+    pub fn get_cursor_pos(&self) -> (Latitude, Longtitude) {
+        self.board_entities.get_cursor_pos()
     }
 
-    pub fn set_game_context() {
-
+    pub fn update_game_context(&mut self, game_context: &caro_protocol::GameContext) {
+        self.board_entities.update_board_context(game_context);
     }
 
     pub fn update(&self) {
@@ -97,13 +91,117 @@ impl ScreenManager {
                 for entity in self.game_entities_vec.iter() {
                     entity.display();
                 }
+                self.board_entities.update();
             }
-        }
-        if let Some(cursor) = self.cursor_entity.as_ref() {
-            cursor.display();
         }
     }
 
+    pub fn update_board_only(&self) {
+        match self.state {
+            ScreenState::InGame => self.board_entities.update(),
+            _ => ()
+        }
+    }
+
+}
+
+pub const BOARD_HEIGHT: usize = 20;
+pub const BOARD_WIDTH: usize = 20;
+struct BoardManager {
+    vertical_range: (usize, usize),
+    horizontal_range: (usize, usize),
+    // cursor_pos: (Latitude, Longtitude),
+    // last_opp_move: (Latitude, Longtitude),
+
+    coordinate_layout: Box<dyn screen_entity::ScreenEntity>,
+    last_opp_move_cursor: Option<Box<dyn screen_entity::ScreenEntity>>,
+    player_cursor: Box<dyn screen_entity::ScreenEntity>,
+    player1_moves: Box<dyn screen_entity::ScreenEntity>,
+    player2_moves: Box<dyn screen_entity::ScreenEntity>,
+}
+
+impl BoardManager {
+    fn new() -> Self {
+        let vertical_range = (0, BOARD_HEIGHT-1);
+        let horizontal_range = (0, BOARD_WIDTH-1);
+
+        let entities_factory = entities_factory::EntitiesFactory::new();
+
+        let coordinate_layout = entities_factory.get_board_entity(entities_factory::BoardEntityType::CoordinateLayout
+            (vertical_range, horizontal_range));
+        let player_cursor = entities_factory.get_board_entity(entities_factory::BoardEntityType::YourCursor
+            (vertical_range, horizontal_range, (0, 0)));
+        let player1_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::XMoveSet
+            (vertical_range, horizontal_range, Vec::new()));
+        let player2_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::OMoveSet
+            (vertical_range, horizontal_range, Vec::new()));
+        Self {
+            vertical_range,
+            horizontal_range,
+            
+            coordinate_layout,
+            last_opp_move_cursor: None,
+            player_cursor,
+            player1_moves,
+            player2_moves,
+        }
+    }
+
+    fn set_cursor_pos(&mut self, latitude: i64, longtitude: i64) {
+        // self.cursor_pos.0 = latitude;
+        // self.cursor_pos.1 = longtitude;
+        if latitude < self.vertical_range.0 as i64 {
+
+        } else if latitude > self.vertical_range.1 as i64 {
+
+        }
+        if longtitude < self.horizontal_range.0 as i64 {
+
+        } else if longtitude > self.horizontal_range.1 as i64 {
+
+        }
+        self.player_cursor.set_position(latitude, longtitude);
+    }
+
+    fn get_cursor_pos(&self) -> (Latitude, Longtitude) {
+        // (self.cursor_pos.0, self.cursor_pos.1);
+        self.player_cursor.get_position()
+    }
+
+    fn update_board_context(&mut self, game_context: &caro_protocol::GameContext) {
+        let entities_factory = entities_factory::EntitiesFactory::new();
+
+        let player1_moves = game_context.player1_move_history
+                                            .iter()
+                                            .filter_map(|(x, y)| {
+                                                Some((*x as usize, *y as usize))
+                                            }).collect();
+
+        let player2_moves = game_context.player2_move_history
+                                            .iter()
+                                            .filter_map(|(x, y)| {
+                                                Some((*x as usize, *y as usize))
+                                            }).collect();
+
+        self.player1_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::XMoveSet
+            (self.vertical_range, self.horizontal_range, player1_moves));
+        self.player2_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::OMoveSet
+            (self.vertical_range, self.horizontal_range, player2_moves));
+    }
+
+    fn update(&self) {
+        // layer 1
+        self.coordinate_layout.display();
+        // layer 2
+        if let Some(entity) = &self.last_opp_move_cursor {
+            entity.display();
+        }
+        // layer 3
+        self.player_cursor.display();
+        // layer 4
+        self.player1_moves.display();
+        self.player2_moves.display();
+    }
 }
 
 pub fn print_caro_board(board: Vec<caro_protocol::Row>) {
