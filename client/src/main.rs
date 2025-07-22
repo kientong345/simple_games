@@ -19,7 +19,7 @@ async fn main() {
     screen_manager.lock().await.clean();
     screen_manager.lock().await.set_state(screen_manager::ScreenState::Menu);
     screen_manager.lock().await.update();
-    screen_manager.lock().await.enable_prompt_mode_at(17, 63);
+    screen_manager.lock().await.enable_prompt_mode();
 
     response_getter.lock().await.set_action_on_response(make_response_action!(move |msg: caro_protocol::MessagePacket| {
         // println!("recv {:?}", msg);
@@ -41,7 +41,8 @@ async fn main() {
                             screen_manager.lock().await.set_player_order(caro_protocol::PlayerOrder::Player1);
                             screen_manager.lock().await.set_state(screen_manager::ScreenState::InRoom);
                             screen_manager.lock().await.update();
-                            screen_manager.lock().await.enable_prompt_mode_at(17, 63);
+                            screen_manager.lock().await.log("JoinedRoomAsPlayer1".to_string());
+                            screen_manager.lock().await.enable_prompt_mode();
                         },
                         caro_protocol::ConnectState::Disconnected => {
                         },
@@ -59,7 +60,8 @@ async fn main() {
                             screen_manager.lock().await.set_player_order(caro_protocol::PlayerOrder::Player2);
                             screen_manager.lock().await.set_state(screen_manager::ScreenState::InRoom);
                             screen_manager.lock().await.update();
-                            screen_manager.lock().await.enable_prompt_mode_at(17, 63);
+                            screen_manager.lock().await.log("JoinedRoomAsPlayer2".to_string());
+                            screen_manager.lock().await.enable_prompt_mode();
                         },
                         caro_protocol::ConnectState::Disconnected => {
 
@@ -82,7 +84,8 @@ async fn main() {
                             screen_manager.lock().await.clean();
                             screen_manager.lock().await.set_state(screen_manager::ScreenState::InGame);
                             screen_manager.lock().await.update();
-                            screen_manager.lock().await.enable_prompt_mode_at(17, 63);
+                            screen_manager.lock().await.log("game is ready!".to_string());
+                            screen_manager.lock().await.enable_prompt_mode();
                         },
                         caro_protocol::ConnectState::Disconnected => {
 

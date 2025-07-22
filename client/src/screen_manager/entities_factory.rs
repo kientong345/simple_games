@@ -73,4 +73,18 @@ impl EntitiesFactory {
             },
         }
     }
+
+    pub fn get_log_entity(&self, content: String, screen_type: ScreenType) -> Box<dyn screen_entity::ScreenEntity> {
+        match screen_type {
+            ScreenType::Menu => {
+                Box::new(menu_entities::LogBox::new(content))
+            },
+            ScreenType::InRoom => {
+                Box::new(room_entities::LogBox::new(content))
+            },
+            ScreenType::InGame => {
+                Box::new(game_entities::LogBox::new(content))
+            },
+        }
+    }
 }

@@ -233,3 +233,33 @@ impl screen_entity::ScreenEntity for OMoveSet {
         // locked
     }
 }
+
+const GAME_LOG_BOX_POS: (usize, usize) = (19, 61);
+const GAME_LOG_BOX_WIDTH: usize = 20;
+pub struct LogBox {
+    entity: caro_console::output::DrawableBox,
+}
+
+impl LogBox {
+    pub fn new(content: String) -> Self {
+        Self {
+            entity: caro_console::output::DrawableBox::from((content, GAME_LOG_BOX_WIDTH, GAME_LOG_BOX_POS.0, GAME_LOG_BOX_POS.1)),
+        }
+    }
+}
+
+impl screen_entity::ScreenEntity for LogBox {
+    fn display(&self) {
+        caro_console::output::set_pen_color(caro_console::output::Color::White(100));
+        caro_console::output::draw(&self.entity);
+    }
+
+    fn get_position(&self) -> (screen_entity::Latitude, screen_entity::Longtitude) {
+        (self.entity.coordinate.0 as i64, self.entity.coordinate.1 as i64)
+    }
+
+    fn set_position(&mut self, latitude: screen_entity::Latitude, longtitude: screen_entity::Longtitude) {
+        self.entity.coordinate.0 = latitude as usize;
+        self.entity.constraint.1 = longtitude as usize;
+    }
+}
