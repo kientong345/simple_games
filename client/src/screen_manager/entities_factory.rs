@@ -12,10 +12,9 @@ pub enum ScreenType {
 #[derive(Debug, Clone)]
 pub enum BoardEntityType {
     CoordinateLayout((usize, usize), (usize, usize)),
-    OppCursor((usize, usize), (usize, usize), (usize, usize)),
-    YourCursor((usize, usize), (usize, usize), (usize, usize)),
-    XMoveSet((usize, usize), (usize, usize), Vec<(usize, usize)>),
-    OMoveSet((usize, usize), (usize, usize), Vec<(usize, usize)>),
+    Cursor((usize, usize), (usize, usize), (usize, usize), bool),
+    XMoveSet((usize, usize), (usize, usize), Vec<(usize, usize)>, bool),
+    OMoveSet((usize, usize), (usize, usize), Vec<(usize, usize)>, bool),
 }
 
 pub struct EntitiesFactory {
@@ -63,17 +62,14 @@ impl EntitiesFactory {
             BoardEntityType::CoordinateLayout(vertical_range, horizontal_range) => {
                 Box::new(game_entities::CoordinateLayout::new(vertical_range, horizontal_range))
             },
-            BoardEntityType::OppCursor(vertical_range, horizontal_range, coordinate) => {
-                Box::new(game_entities::OppCursor::new(vertical_range, horizontal_range, coordinate))
+            BoardEntityType::Cursor(vertical_range, horizontal_range, coordinate, are_you) => {
+                Box::new(game_entities::Cursor::new(vertical_range, horizontal_range, coordinate, are_you))
             },
-            BoardEntityType::YourCursor(vertical_range, horizontal_range, coordinate) => {
-                Box::new(game_entities::YourCursor::new(vertical_range, horizontal_range, coordinate))
+            BoardEntityType::XMoveSet(vertical_range, horizontal_range, move_set, are_you) => {
+                Box::new(game_entities::XMoveSet::new(vertical_range, horizontal_range, move_set, are_you))
             },
-            BoardEntityType::XMoveSet(vertical_range, horizontal_range, move_set ) => {
-                Box::new(game_entities::XMoveSet::new(vertical_range, horizontal_range, move_set))
-            },
-            BoardEntityType::OMoveSet(vertical_range, horizontal_range, move_set ) => {
-                Box::new(game_entities::OMoveSet::new(vertical_range, horizontal_range, move_set))
+            BoardEntityType::OMoveSet(vertical_range, horizontal_range, move_set, are_you) => {
+                Box::new(game_entities::OMoveSet::new(vertical_range, horizontal_range, move_set, are_you))
             },
         }
     }

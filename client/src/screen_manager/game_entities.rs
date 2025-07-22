@@ -77,7 +77,7 @@ impl screen_entity::ScreenEntity for PromptBox {
 
 // ----------------------------------------------------------------------
 
-const GAME_BOARD_BASE_POS: (usize, usize) = (15, 60);
+const GAME_BOARD_BASE_POS: (usize, usize) = (2, 4);
 pub struct CoordinateLayout {
     entities: Vec<caro_console::output::DrawableBox>,
 }
@@ -112,13 +112,14 @@ impl screen_entity::ScreenEntity for CoordinateLayout {
     }
 }
 
-pub struct OppCursor {
+pub struct Cursor {
     entity: caro_console::output::DrawableBox,
     coordinate: (usize, usize),
+    are_you: bool,
 }
 
-impl OppCursor {
-    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), coordinate: (usize, usize)) -> Self {
+impl Cursor {
+    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), coordinate: (usize, usize), are_you: bool) -> Self {
         let board_pos = caro_console::caro_art_tools::BoardPosition {
             base: GAME_BOARD_BASE_POS,
             vertical_range,
@@ -127,49 +128,18 @@ impl OppCursor {
         Self {
             entity: caro_console::caro_art_tools::get_drawable_cursor(&board_pos, coordinate),
             coordinate,
+            are_you,
         }
     }
 }
 
-impl screen_entity::ScreenEntity for OppCursor {
+impl screen_entity::ScreenEntity for Cursor {
     fn display(&self) {
-        caro_console::output::set_pen_color(caro_console::output::Color::Red(100));
-        caro_console::output::draw(&self.entity);
-    }
-
-    fn get_position(&self) -> (screen_entity::Latitude, screen_entity::Longtitude) {
-        let (latitude, longtitude) = self.coordinate;
-        (latitude as i64, longtitude as i64)
-    }
-
-    fn set_position(&mut self, latitude: screen_entity::Latitude, longtitude: screen_entity::Longtitude) {
-        self.coordinate.0 = latitude as usize;
-        self.coordinate.1 = longtitude as usize;
-    }
-}
-
-pub struct YourCursor {
-    entity: caro_console::output::DrawableBox,
-    coordinate: (usize, usize),
-}
-
-impl YourCursor {
-    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), coordinate: (usize, usize)) -> Self {
-        let board_pos = caro_console::caro_art_tools::BoardPosition {
-            base: GAME_BOARD_BASE_POS,
-            vertical_range,
-            horizontal_range,
-        };
-        Self {
-            entity: caro_console::caro_art_tools::get_drawable_cursor(&board_pos, coordinate),
-            coordinate,
+        if self.are_you {
+            caro_console::output::set_pen_color(caro_console::output::Color::Green(100));
+        } else {
+            caro_console::output::set_pen_color(caro_console::output::Color::Red(100));
         }
-    }
-}
-
-impl screen_entity::ScreenEntity for YourCursor {
-    fn display(&self) {
-        caro_console::output::set_pen_color(caro_console::output::Color::Green(100));
         caro_console::output::draw(&self.entity);
     }
 
@@ -186,10 +156,11 @@ impl screen_entity::ScreenEntity for YourCursor {
 
 pub struct XMoveSet {
     entities: Vec<caro_console::output::DrawableBox>,
+    are_you: bool,
 }
 
 impl XMoveSet {
-    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), move_set: Vec<(usize, usize)>) -> Self {
+    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), move_set: Vec<(usize, usize)>, are_you: bool) -> Self {
         let board_pos = caro_console::caro_art_tools::BoardPosition {
             base: GAME_BOARD_BASE_POS,
             vertical_range,
@@ -197,13 +168,18 @@ impl XMoveSet {
         };
         Self {
             entities: caro_console::caro_art_tools::get_drawable_x_moves(&board_pos, move_set),
+            are_you,
         }
     }
 }
 
 impl screen_entity::ScreenEntity for XMoveSet {
     fn display(&self) {
-        caro_console::output::set_pen_color(caro_console::output::Color::Green(100));
+        if self.are_you {
+            caro_console::output::set_pen_color(caro_console::output::Color::Green(100));
+        } else {
+            caro_console::output::set_pen_color(caro_console::output::Color::Red(100));
+        }
         for entity in &self.entities {
             caro_console::output::draw(entity);
         }
@@ -220,24 +196,30 @@ impl screen_entity::ScreenEntity for XMoveSet {
 
 pub struct OMoveSet {
     entities: Vec<caro_console::output::DrawableBox>,
+    are_you: bool,
 }
 
 impl OMoveSet {
-    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), move_set: Vec<(usize, usize)>) -> Self {
+    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), move_set: Vec<(usize, usize)>, are_you: bool) -> Self {
         let board_pos = caro_console::caro_art_tools::BoardPosition {
             base: GAME_BOARD_BASE_POS,
             vertical_range,
             horizontal_range,
         };
         Self {
-            entities: caro_console::caro_art_tools::get_drawable_x_moves(&board_pos, move_set),
+            entities: caro_console::caro_art_tools::get_drawable_o_moves(&board_pos, move_set),
+            are_you,
         }
     }
 }
 
 impl screen_entity::ScreenEntity for OMoveSet {
     fn display(&self) {
-        caro_console::output::set_pen_color(caro_console::output::Color::Red(100));
+        if self.are_you {
+            caro_console::output::set_pen_color(caro_console::output::Color::Green(100));
+        } else {
+            caro_console::output::set_pen_color(caro_console::output::Color::Red(100));
+        }
         for entity in &self.entities {
             caro_console::output::draw(entity);
         }

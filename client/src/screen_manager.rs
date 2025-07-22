@@ -47,6 +47,10 @@ impl ScreenManager {
         caro_console::output::clean_screen();
     }
 
+    pub fn set_player_order(&mut self, player_order: caro_protocol::PlayerOrder) {
+        self.board_entities.set_player_order(player_order);
+    }
+
     pub fn set_state(&mut self, state: ScreenState) {
         self.state = state;
     }
@@ -105,8 +109,8 @@ impl ScreenManager {
 
 }
 
-pub const BOARD_HEIGHT: usize = 20;
-pub const BOARD_WIDTH: usize = 20;
+pub const BOARD_HEIGHT: usize = 15;
+pub const BOARD_WIDTH: usize = 25;
 struct BoardManager {
     vertical_range: (usize, usize),
     horizontal_range: (usize, usize),
@@ -118,6 +122,8 @@ struct BoardManager {
     player_cursor: Box<dyn screen_entity::ScreenEntity>,
     player1_moves: Box<dyn screen_entity::ScreenEntity>,
     player2_moves: Box<dyn screen_entity::ScreenEntity>,
+
+    player_order: caro_protocol::PlayerOrder,
 }
 
 impl BoardManager {
@@ -129,12 +135,12 @@ impl BoardManager {
 
         let coordinate_layout = entities_factory.get_board_entity(entities_factory::BoardEntityType::CoordinateLayout
             (vertical_range, horizontal_range));
-        let player_cursor = entities_factory.get_board_entity(entities_factory::BoardEntityType::YourCursor
-            (vertical_range, horizontal_range, (0, 0)));
+        let player_cursor = entities_factory.get_board_entity(entities_factory::BoardEntityType::Cursor
+            (vertical_range, horizontal_range, (0, 0), true));
         let player1_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::XMoveSet
-            (vertical_range, horizontal_range, Vec::new()));
+            (vertical_range, horizontal_range, Vec::new(), false));
         let player2_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::OMoveSet
-            (vertical_range, horizontal_range, Vec::new()));
+            (vertical_range, horizontal_range, Vec::new(), false));
         Self {
             vertical_range,
             horizontal_range,
@@ -144,7 +150,13 @@ impl BoardManager {
             player_cursor,
             player1_moves,
             player2_moves,
+
+            player_order: caro_protocol::PlayerOrder::Player1,
         }
+    }
+
+    fn set_player_order(&mut self, player_order: caro_protocol::PlayerOrder) {
+        self.player_order = player_order;
     }
 
     fn set_cursor_pos(&mut self, latitude: i64, longtitude: i64) {
@@ -183,10 +195,14 @@ impl BoardManager {
                                                 Some((*x as usize, *y as usize))
                                             }).collect();
 
+        let is_player1 = match self.player_order {
+            caro_protocol::PlayerOrder::Player1 => true,
+            caro_protocol::PlayerOrder::Player2 => false,
+        };
         self.player1_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::XMoveSet
-            (self.vertical_range, self.horizontal_range, player1_moves));
+            (self.vertical_range, self.horizontal_range, player1_moves, is_player1));
         self.player2_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::OMoveSet
-            (self.vertical_range, self.horizontal_range, player2_moves));
+            (self.vertical_range, self.horizontal_range, player2_moves, !is_player1));
     }
 
     fn update(&self) {
