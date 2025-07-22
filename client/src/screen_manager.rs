@@ -72,7 +72,7 @@ impl ScreenManager {
                 caro_console::output::enable_prompt_mode_at(17, 63);
             },
             ScreenState::InGame => {
-                caro_console::output::enable_prompt_mode_at(17, 63);
+                caro_console::output::enable_prompt_mode_at(35, 63);
             }
         }
     }
@@ -247,12 +247,14 @@ impl BoardManager {
             caro_protocol::PlayerOrder::Player2 => false,
         };
         let last_opp_move = if is_player1 {
-            &player2_moves.last().unwrap()
+            &player2_moves.last()
         } else {
-            &player1_moves.last().unwrap()
+            &player1_moves.last()
         };
-        self.last_opp_move_cursor = Some(entities_factory.get_board_entity(entities_factory::BoardEntityType::Cursor
-            (self.vertical_range, self.horizontal_range, (last_opp_move.0, last_opp_move.1), false)));
+        if let Some(opp_move) = last_opp_move {
+            self.last_opp_move_cursor = Some(entities_factory.get_board_entity(entities_factory::BoardEntityType::Cursor
+                (self.vertical_range, self.horizontal_range, (opp_move.0, opp_move.1), false)));
+        }
         self.player1_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::XMoveSet
             (self.vertical_range, self.horizontal_range, player1_moves, is_player1));
         self.player2_moves = entities_factory.get_board_entity(entities_factory::BoardEntityType::OMoveSet

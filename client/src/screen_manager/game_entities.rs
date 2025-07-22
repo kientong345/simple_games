@@ -234,7 +234,7 @@ impl screen_entity::ScreenEntity for OMoveSet {
     }
 }
 
-const GAME_LOG_BOX_POS: (usize, usize) = (19, 61);
+const GAME_LOG_BOX_POS: (usize, usize) = (34, 61);
 const GAME_LOG_BOX_WIDTH: usize = 20;
 pub struct LogBox {
     entity: caro_console::output::DrawableBox,
