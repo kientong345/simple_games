@@ -63,7 +63,6 @@ impl ScreenManager {
     }
 
     pub fn enable_prompt_mode(&self) {
-        // let entities_factory = entities_factory::EntitiesFactory::new();
         match self.state {
             ScreenState::Menu => {
                 caro_console::output::enable_prompt_mode_at(17, 63);
@@ -124,12 +123,22 @@ impl ScreenManager {
             }
         }
         self.log_entity.display();
+
+        // relocate the command prompt
+        if caro_console::output::is_prompt_mode() {
+            self.enable_prompt_mode();
+        }
     }
 
     pub fn update_board_only(&self) {
         match self.state {
             ScreenState::InGame => self.board_entities.update(),
             _ => ()
+        }
+
+        // relocate the command prompt
+        if caro_console::output::is_prompt_mode() {
+            self.enable_prompt_mode();
         }
     }
 
@@ -147,6 +156,11 @@ impl ScreenManager {
             }
         }
         self.log_entity.display();
+
+        // relocate the command prompt
+        if caro_console::output::is_prompt_mode() {
+            self.enable_prompt_mode();
+        }
     }
 
 }
