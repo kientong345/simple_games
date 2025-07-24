@@ -32,7 +32,7 @@ async fn main() {
                     let conn_state = global_state.read().await.get_connection_state();
                     match conn_state {
                         caro_protocol::ConnectState::Connected => {
-                            global_state.write().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
+                            global_state.write().await.set_player_state(caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected));
                             global_state.write().await.set_current_rid(rid);
                             screen_manager.lock().await.clean();
                             screen_manager.lock().await.set_player_order(caro_protocol::PlayerOrder::Player1);
@@ -49,7 +49,7 @@ async fn main() {
                     let conn_state = global_state.read().await.get_connection_state();
                     match conn_state {
                         caro_protocol::ConnectState::Connected => {
-                            global_state.write().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
+                            global_state.write().await.set_player_state(caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected));
                             global_state.write().await.set_current_rid(rid);
                             screen_manager.lock().await.clean();
                             screen_manager.lock().await.set_player_order(caro_protocol::PlayerOrder::Player2);

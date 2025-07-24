@@ -44,7 +44,7 @@ pub enum ConnectState {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum PlayerState {
     Logged(ConnectState),
-    Waiting(ConnectState),
+    InRoom(ConnectState),
     InGame(ConnectState),
 }
 

@@ -53,7 +53,7 @@ impl ScreenManager {
             caro_protocol::PlayerState::Logged(_) => {
                 caro_console::input::enable_prompt_mode_at(17, 63);
             },
-            caro_protocol::PlayerState::Waiting(_) =>  {
+            caro_protocol::PlayerState::InRoom(_) =>  {
                 caro_console::input::enable_prompt_mode_at(17, 63);
             },
             caro_protocol::PlayerState::InGame(_) => {
@@ -97,7 +97,7 @@ impl ScreenManager {
                     entity.display();
                 }
             },
-            caro_protocol::PlayerState::Waiting(_) =>  {
+            caro_protocol::PlayerState::InRoom(_) =>  {
                 for entity in self.room_entities_vec.iter() {
                     entity.display();
                 }
@@ -136,7 +136,7 @@ impl ScreenManager {
             caro_protocol::PlayerState::Logged(_) => {
                 self.log_entity = entities_factory::EntitiesFactory::get_log_entity(content, entities_factory::ScreenType::Menu);
             },
-            caro_protocol::PlayerState::Waiting(_) =>  {
+            caro_protocol::PlayerState::InRoom(_) =>  {
                 self.log_entity = entities_factory::EntitiesFactory::get_log_entity(content, entities_factory::ScreenType::InRoom);
             },
             caro_protocol::PlayerState::InGame(_) => {

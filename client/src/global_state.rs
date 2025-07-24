@@ -26,8 +26,8 @@ impl GolbalState {
             caro_protocol::PlayerState::Logged(_conn_state) => {
                 self.player_state = caro_protocol::PlayerState::Logged(connection_state);
             },
-            caro_protocol::PlayerState::Waiting(_conn_state) => {
-                self.player_state = caro_protocol::PlayerState::Waiting(connection_state);
+            caro_protocol::PlayerState::InRoom(_conn_state) => {
+                self.player_state = caro_protocol::PlayerState::InRoom(connection_state);
             },
             caro_protocol::PlayerState::InGame(_conn_state) => {
                 self.player_state = caro_protocol::PlayerState::InGame(connection_state);
@@ -40,7 +40,7 @@ impl GolbalState {
             caro_protocol::PlayerState::Logged(conn_state) => {
                 conn_state
             },
-            caro_protocol::PlayerState::Waiting(conn_state) => {
+            caro_protocol::PlayerState::InRoom(conn_state) => {
                 conn_state
             },
             caro_protocol::PlayerState::InGame(conn_state) => {

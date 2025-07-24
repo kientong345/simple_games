@@ -36,38 +36,7 @@ impl CommandExecuter {
             },
             caro_protocol::PlayerCode::PlayerRequestState => {
                 let player_state = self.player_manager.lock().await.get_player_state(pid).unwrap();
-                let code = match player_state {
-                    player_manager::PlayerState::Logged(conn_state) => {
-                        match conn_state {
-                            player_manager::ConnectState::Connected => {
-                                caro_protocol::ServerCode::State(caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected))
-                            },
-                            player_manager::ConnectState::Disconnected => {
-                                caro_protocol::ServerCode::State(caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Disconnected))
-                            },
-                        }
-                    },
-                    player_manager::PlayerState::Waiting(conn_state) => {
-                        match conn_state {
-                            player_manager::ConnectState::Connected => {
-                                caro_protocol::ServerCode::State(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected))
-                            },
-                            player_manager::ConnectState::Disconnected => {
-                                caro_protocol::ServerCode::State(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Disconnected))
-                            },
-                        }
-                    },
-                    player_manager::PlayerState::InGame(conn_state) => {
-                        match conn_state {
-                            player_manager::ConnectState::Connected => {
-                                caro_protocol::ServerCode::State(caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected))
-                            },
-                            player_manager::ConnectState::Disconnected => {
-                                caro_protocol::ServerCode::State(caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Disconnected))
-                            },
-                        }
-                    },
-                };
+                let code = caro_protocol::ServerCode::State(player_state);
                 let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                 self.player_manager.lock().await.response(pid, new_packet).await;
             }
@@ -77,13 +46,13 @@ impl CommandExecuter {
         }
 
         match player_state {
-            player_manager::PlayerState::Logged(player_manager::ConnectState::Connected) => {
+            caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) => {
                 self.execute_logged_request(pid, code).await;
             },
-            player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected) => {
+            caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) => {
                 self.execute_waiting_request(pid, code).await;
             },
-            player_manager::PlayerState::InGame(player_manager::ConnectState::Connected) => {
+            caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) => {
                 self.execute_ingame_request(pid, code).await;
             },
             _ => {
@@ -107,8 +76,8 @@ impl CommandExecuter {
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
             player_manager_clone.lock().await.response(pid2, new_packet).await;
 
-            player_manager_clone.lock().await.set_player_state(pid1, player_manager::PlayerState::InGame(player_manager::ConnectState::Connected));
-            player_manager_clone.lock().await.set_player_state(pid2, player_manager::PlayerState::InGame(player_manager::ConnectState::Connected));
+            player_manager_clone.lock().await.set_player_state(pid1, caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected));
+            player_manager_clone.lock().await.set_player_state(pid2, caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected));
 
             // let code = caro_protocol::ServerCode::State(caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected));
             // let new_message_packet = caro_protocol::MessagePacket::new_server_packet(code);
@@ -134,7 +103,7 @@ impl CommandExecuter {
                     self.player_manager.lock().await.response(pid, new_packet).await;
                 } else {
                     let _new_gid = self.game_manager.lock().await.add_game(new_rid, rule_type);
-                    self.player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
+                    self.player_manager.lock().await.set_player_state(pid, caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected));
                     let code = caro_protocol::ServerCode::JoinedRoomAsPlayer1(new_rid);
                     let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                     self.player_manager.lock().await.response(pid, new_packet).await;
@@ -145,7 +114,7 @@ impl CommandExecuter {
             },
             caro_protocol::PlayerCode::JoinRoom(rid) => {
                 let _result = self.room_manager.lock().await.add_player_to_room(rid, room_manager::PlayerOrder::Player2(pid));
-                self.player_manager.lock().await.set_player_state(pid, player_manager::PlayerState::Waiting(player_manager::ConnectState::Connected));
+                self.player_manager.lock().await.set_player_state(pid, caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected));
                 let (pid1, pid2) = self.room_manager.lock().await.get_pids_in_room(rid).unwrap();
                 let code = if pid == pid1 {
                     caro_protocol::ServerCode::JoinedRoomAsPlayer1(rid)
@@ -234,21 +203,15 @@ impl CommandExecuter {
         let internal_game_context = self.game_manager.lock().await.get_context_in_game(gid).unwrap();
 
         let player1_state = self.player_manager.lock().await.get_player_state(pid1).unwrap();
-        let mut player1_connection_state = caro_protocol::ConnectState::Disconnected;
-        if let player_manager::PlayerState::InGame(conn_state) = player1_state {
-            match conn_state {
-                player_manager::ConnectState::Connected => player1_connection_state = caro_protocol::ConnectState::Connected,
-                player_manager::ConnectState::Disconnected => player1_connection_state = caro_protocol::ConnectState::Disconnected,
-            }
+        let player1_connection_state = match player1_state {
+            caro_protocol::PlayerState::InGame(conn_state) => conn_state,
+            _ => caro_protocol::ConnectState::Disconnected,
         };
 
         let player2_state = self.player_manager.lock().await.get_player_state(pid2).unwrap();
-        let mut player2_connection_state = caro_protocol::ConnectState::Disconnected;
-        if let player_manager::PlayerState::InGame(conn_state) = player2_state {
-            match conn_state {
-                player_manager::ConnectState::Connected => player2_connection_state = caro_protocol::ConnectState::Connected,
-                player_manager::ConnectState::Disconnected => player2_connection_state = caro_protocol::ConnectState::Disconnected,
-            }
+        let player2_connection_state = match player2_state {
+            caro_protocol::PlayerState::InGame(conn_state) => conn_state,
+            _ => caro_protocol::ConnectState::Disconnected,
         };
 
         let receiver_order = if pid == pid1 {

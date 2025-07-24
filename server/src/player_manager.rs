@@ -7,21 +7,8 @@ use crate::{
     caro_protocol
 };
 
-#[derive(Debug, Clone, Copy)]
-pub enum ConnectState {
-    Connected,
-    Disconnected,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PlayerState {
-    Logged(ConnectState),
-    Waiting(ConnectState),
-    InGame(ConnectState),
-}
-
 struct Player {
-    state: PlayerState,
+    state: caro_protocol::PlayerState,
     responser: server_endpoint::Responser,
     request_getter: Arc<Mutex<server_endpoint::RequestGetter>>,
     response_handler: Option<Arc<Mutex<server_endpoint::ResponseHandler>>>,
@@ -32,18 +19,18 @@ impl Player {
         let responser = server_endpoint::Responser::new(sender);
         let request_getter = Arc::new(Mutex::new(server_endpoint::RequestGetter::new(receiver)));
         Self {
-            state: PlayerState::Logged(ConnectState::Connected),
+            state: caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected),
             responser,
             request_getter,
             response_handler: None,
         }
     }
 
-    fn set_state(&mut self, state: PlayerState) {
+    fn set_state(&mut self, state: caro_protocol::PlayerState) {
         self.state = state;
     }
 
-    fn get_state(&self) -> PlayerState {
+    fn get_state(&self) -> caro_protocol::PlayerState {
         self.state
     }
 
@@ -119,13 +106,13 @@ impl PlayerContainer {
         self.players_map.remove(&pid);
     }
 
-    pub fn set_player_state(&mut self, pid: caro_protocol::PlayerId, state: PlayerState) {
+    pub fn set_player_state(&mut self, pid: caro_protocol::PlayerId, state: caro_protocol::PlayerState) {
         if let Some(player) = self.players_map.get_mut(&pid) {
             player.set_state(state);
         }
     }
 
-    pub fn get_player_state(&self, pid: caro_protocol::PlayerId) -> Option<PlayerState> {
+    pub fn get_player_state(&self, pid: caro_protocol::PlayerId) -> Option<caro_protocol::PlayerState> {
         self.players_map.get(&pid).map(|p| p.get_state())
     }
 

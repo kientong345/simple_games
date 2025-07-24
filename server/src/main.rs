@@ -31,7 +31,7 @@ async fn main() {
 
     while let (receiver, sender) = listener.accept().await {
         let new_pid = player_manager.lock().await.add_player(receiver, sender);
-        player_manager.lock().await.set_player_state(new_pid, player_manager::PlayerState::Logged(player_manager::ConnectState::Connected));
+        player_manager.lock().await.set_player_state(new_pid, caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected));
         // let code = caro_protocol::ServerCode::State(caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected));
         // let new_message_packet = caro_protocol::MessagePacket::new_server_packet(code);
         // player_manager.lock().await.response(new_pid, new_message_packet).await;
