@@ -1,6 +1,6 @@
 use caro_console::artworks::ArtDimension;
 
-use crate::screen_manager::screen_entity;
+use crate::output_to_user::screen_entity;
 
 pub struct ServerInfoBox {
     ipaddress: String,

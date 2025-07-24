@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use caro_client::{caro_protocol::{self, MessagePacket}, client_endpoint::{self, Requester, ResponseGetter}, global_state, command_getter, screen_manager, make_input_action, make_response_action};
+use caro_client::{caro_protocol::{self, MessagePacket}, client_endpoint::{self, Requester, ResponseGetter}, global_state, input_from_user, output_to_user, make_input_action, make_response_action};
 use tokio::sync::{Mutex, RwLock};
 
 #[tokio::main]
@@ -14,7 +14,7 @@ async fn main() {
 
     global_state.write().await.set_connection_state(caro_protocol::ConnectState::Connected);
 
-    let screen_manager = Arc::new(Mutex::new(screen_manager::ScreenManager::new(global_state.clone())));
+    let screen_manager = Arc::new(Mutex::new(output_to_user::ScreenManager::new(global_state.clone())));
 
     screen_manager.lock().await.clean();
     screen_manager.lock().await.update().await;
@@ -104,15 +104,15 @@ async fn main() {
 
     ResponseGetter::handling_response(response_getter).await;
 
-    let input_reader = command_getter::get_input_reader();
-    let command_getter = Arc::new(Mutex::new(command_getter::CommandGetter::new(input_reader)));
+    let input_reader = input_from_user::get_input_reader();
+    let command_getter = Arc::new(Mutex::new(input_from_user::CommandGetter::new(input_reader)));
 
     let requester_clone = requester.clone();
-    command_getter.lock().await.set_action_on_input(make_input_action!(move |cmd: command_getter::UserCommand| {
+    command_getter.lock().await.set_action_on_input(make_input_action!(move |cmd: input_from_user::UserCommand| {
         let requester = requester_clone.clone();
         let future = async move {
             match cmd {
-                command_getter::UserCommand::RequestNewRoom(game_rule) => {
+                input_from_user::UserCommand::RequestNewRoom(game_rule) => {
                     match game_rule {
                         caro_protocol::GameRule::TicTacToe => {
                             let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::TicTacToe);
@@ -134,13 +134,13 @@ async fn main() {
                         },
                     }
                 },
-                command_getter::UserCommand::JoinRoom(rid) => {
+                input_from_user::UserCommand::JoinRoom(rid) => {
                     let code = caro_protocol::PlayerCode::JoinRoom(rid);
                     let new_packet = MessagePacket::new_player_packet(code);
                     // println!("send: {:?}", new_packet);
                     requester.lock().await.send_request(new_packet).await;
                 },
-                command_getter::UserCommand::Move(coor) => {
+                input_from_user::UserCommand::Move(coor) => {
                     let coor = (coor.0, coor.1);
                     let code = caro_protocol::PlayerCode::PlayerMove(coor);
                     let new_packet = MessagePacket::new_player_packet(code);
@@ -155,7 +155,7 @@ async fn main() {
         Box::pin(future) as futures::future::BoxFuture<'static, ()>
     }));
 
-    command_getter::CommandGetter::handling_input(command_getter).await;
+    input_from_user::CommandGetter::handling_input(command_getter).await;
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;

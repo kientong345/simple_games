@@ -1,4 +1,4 @@
-use crate::screen_manager::{game_entities, menu_entities, room_entities};
+use crate::output_to_user::{game_entities, menu_entities, room_entities};
 
 use super::screen_entity;
 

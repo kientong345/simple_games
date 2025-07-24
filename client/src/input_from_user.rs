@@ -63,7 +63,7 @@ pub type InputHandler = JoinHandle<()>;
 #[macro_export]
 macro_rules! make_input_action {
     ($action:expr) => {
-        Arc::new(tokio::sync::Mutex::new($action)) as crate::command_getter::HandleAction
+        Arc::new(tokio::sync::Mutex::new($action)) as crate::input_from_user::HandleAction
     };
 }
 

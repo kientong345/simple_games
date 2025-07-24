@@ -1,6 +1,6 @@
 use caro_console::artworks::ArtDimension;
 
-use crate::screen_manager::screen_entity;
+use crate::output_to_user::screen_entity;
 
 const GAME_INSTRUCTION_BOX_POS: (usize, usize) = (5, 15);
 pub struct InstructionBox {
