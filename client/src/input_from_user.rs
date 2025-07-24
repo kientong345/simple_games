@@ -18,6 +18,7 @@ pub enum UserCommand {
     Right,
     Undo,
     Redo,
+    SwitchInputMode,
     Invalid,
 }
 
