@@ -33,11 +33,11 @@ pub struct InternalGameContext {
 
 pub struct GameOperator {
     game: simple_caro::SimpleCaro,
-    room_id: i32,
+    room_id: caro_protocol::RoomId,
 }
 
 impl GameOperator {
-    fn new(room_id: i32, game_rule: caro_protocol::GameRule) -> Self {
+    fn new(room_id: caro_protocol::RoomId, game_rule: caro_protocol::GameRule) -> Self {
         let game = simple_caro::SimpleCaro::new();
         match game_rule {
             caro_protocol::GameRule::TicTacToe => {
@@ -221,13 +221,13 @@ impl GameOperator {
         }
     }
 
-    fn get_rid(&self) -> i32 {
+    fn get_rid(&self) -> caro_protocol::RoomId {
         self.room_id
     }
 }
 
 pub struct GameContainer {
-    games_set: HashMap<i32, GameOperator>,
+    games_set: HashMap<caro_protocol::GameId, GameOperator>,
     max_games: usize,
     gid_pool: id_pool::IdPool,
 }
@@ -235,13 +235,13 @@ pub struct GameContainer {
 impl GameContainer {
     pub fn new(max_games: usize, gid_pool: id_pool::IdPool) -> Self {
         Self {
-            games_set: HashMap::<i32, GameOperator>::new(),
+            games_set: HashMap::<caro_protocol::GameId, GameOperator>::new(),
             max_games,
             gid_pool,
         }
     }
 
-    pub fn add_game(&mut self, rid: i32, game_rule: caro_protocol::GameRule) -> i32 {
+    pub fn add_game(&mut self, rid: caro_protocol::RoomId, game_rule: caro_protocol::GameRule) -> caro_protocol::GameId {
         if self.games_set.len() >= self.max_games {
             return -1;
         }
@@ -251,12 +251,12 @@ impl GameContainer {
         new_gid
     }
 
-    pub fn remove_game(&mut self, gid: i32) {
+    pub fn remove_game(&mut self, gid: caro_protocol::GameId) {
         self.gid_pool.dealloc_id(gid);
         self.games_set.remove(&gid);
     }
 
-    pub fn try_start_game(&mut self, gid: i32) -> bool {
+    pub fn try_start_game(&mut self, gid: caro_protocol::GameId) -> bool {
         if let Some(game) = self.games_set.get_mut(&gid) {
             game.try_start()
         } else {
@@ -264,7 +264,7 @@ impl GameContainer {
         }
     }
 
-    pub fn try_stop_game(&mut self, gid: i32) -> bool {
+    pub fn try_stop_game(&mut self, gid: caro_protocol::GameId) -> bool {
         if let Some(game) = self.games_set.get_mut(&gid) {
             game.try_stop()
         } else {
@@ -272,7 +272,7 @@ impl GameContainer {
         }
     }
 
-    pub fn get_context_in_game(&self, gid: i32) -> Option<InternalGameContext> {
+    pub fn get_context_in_game(&self, gid: caro_protocol::GameId) -> Option<InternalGameContext> {
         if let Some(game) = self.games_set.get(&gid) {
             Some(InternalGameContext {
                 board_height: game.get_board_height(),
@@ -288,7 +288,7 @@ impl GameContainer {
         }
     }
 
-    pub fn execute_command_in_game(&mut self, gid: i32, player_order: PlayerOrder, cmd_code: caro_protocol::PlayerCode) -> Option<OperationResult> {
+    pub fn execute_command_in_game(&mut self, gid: caro_protocol::GameId, player_order: PlayerOrder, cmd_code: caro_protocol::PlayerCode) -> Option<OperationResult> {
         if let Some(game) = self.games_set.get_mut(&gid) {
             Some(game.execute_command(player_order, cmd_code))
         } else {
@@ -296,7 +296,7 @@ impl GameContainer {
         }
     }
 
-    pub fn find_game_contain_room(&self, rid: i32) -> Option<i32> {
+    pub fn find_game_contain_room(&self, rid: caro_protocol::RoomId) -> Option<caro_protocol::GameId> {
         let target = self.games_set.iter().find(|&(_gid, game)| {
             let its_rid = game.get_rid();
             its_rid == rid

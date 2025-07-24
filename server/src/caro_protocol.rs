@@ -2,9 +2,13 @@ use serde::{Serialize, Deserialize};
 
 pub const SERVER_ADDRESS: &'static str = "127.0.0.1:12225";
 
+pub type Latitude = i64;
+pub type Longtitude = i64;
+
 pub type RoomId = i32;
 pub type PlayerId = i32;
-pub type Coordinate = (i64, i64);
+pub type GameId = i32;
+pub type Coordinate = (Latitude, Longtitude);
 pub type Row = Vec<TileState>;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

@@ -118,19 +118,19 @@ async fn main() {
             match cmd {
                 command_getter::UserCommand::RequestNewRoom(game_rule) => {
                     match game_rule {
-                        command_getter::GameRule::TicTacToe => {
+                        caro_protocol::GameRule::TicTacToe => {
                             let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::TicTacToe);
                             let new_packet = MessagePacket::new_player_packet(code);
                             // println!("send: {:?}", new_packet);
                             requester.lock().await.send_request(new_packet).await;
                         },
-                        command_getter::GameRule::FourBlockOne => {
+                        caro_protocol::GameRule::FourBlockOne => {
                             let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::FourBlockOne);
                             let new_packet = MessagePacket::new_player_packet(code);
                             // println!("send: {:?}", new_packet);
                             requester.lock().await.send_request(new_packet).await;
                         },
-                        command_getter::GameRule::FiveBlockTwo => {
+                        caro_protocol::GameRule::FiveBlockTwo => {
                             let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::FiveBlockTwo);
                             let new_packet = MessagePacket::new_player_packet(code);
                             // println!("send: {:?}", new_packet);

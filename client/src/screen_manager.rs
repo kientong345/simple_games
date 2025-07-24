@@ -1,5 +1,4 @@
 use crate::caro_protocol;
-use std::cmp::min;
 
 pub mod screen_entity;
 pub mod entities_factory;
@@ -9,9 +8,6 @@ pub mod game_entities;
 
 const SCREEN_WIDTH: usize = 10;
 const SCREEN_HEIGHT: usize = 10;
-
-pub type Latitude = i64;
-pub type Longtitude = i64;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScreenState {
@@ -79,11 +75,11 @@ impl ScreenManager {
         caro_console::input::disable_prompt_mode();
     }
 
-    pub fn set_cursor_pos(&mut self, latitude: Latitude, longtitude: Longtitude) {
+    pub fn set_cursor_pos(&mut self, latitude: caro_protocol::Latitude, longtitude: caro_protocol::Longtitude) {
         self.board_entities.set_cursor_pos(latitude, longtitude);
     }
 
-    pub fn get_cursor_pos(&self) -> (Latitude, Longtitude) {
+    pub fn get_cursor_pos(&self) -> caro_protocol::Coordinate {
         self.board_entities.get_cursor_pos()
     }
 
@@ -244,7 +240,7 @@ impl BoardManager {
         self.player_cursor.set_position(clamped_latitude, clamped_longtitude);
     }
 
-    fn get_cursor_pos(&self) -> (Latitude, Longtitude) {
+    fn get_cursor_pos(&self) -> caro_protocol::Coordinate {
         // (self.cursor_pos.0, self.cursor_pos.1);
         self.player_cursor.get_position()
     }

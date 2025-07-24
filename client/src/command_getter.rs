@@ -2,23 +2,15 @@ use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use tokio::{io::{self, AsyncBufReadExt}, sync::Mutex, task::JoinHandle};
-
-pub type Coordinate = (i64, i64);
-
-#[derive(Debug, Clone, Copy)]
-pub enum GameRule {
-    TicTacToe,
-    FourBlockOne,
-    FiveBlockTwo,
-}
+use crate::caro_protocol;
 
 #[derive(Debug, Clone, Copy)]
 pub enum UserCommand {
-    RequestNewRoom(GameRule),
-    JoinRoom(i32),
+    RequestNewRoom(caro_protocol::GameRule),
+    JoinRoom(caro_protocol::RoomId),
     LeaveRoom,
     ExitApplication,
-    Move(Coordinate),
+    Move(caro_protocol::Coordinate),
     Up,
     Down,
     Left,
@@ -43,9 +35,9 @@ impl ToUserCommand for &str {
         match &*words[0] {
             "mkroom" => {
                 match &*words[1] {
-                    "3" => UserCommand::RequestNewRoom(GameRule::TicTacToe),
-                    "4" => UserCommand::RequestNewRoom(GameRule::FourBlockOne),
-                    "5" => UserCommand::RequestNewRoom(GameRule::FiveBlockTwo),
+                    "3" => UserCommand::RequestNewRoom(caro_protocol::GameRule::TicTacToe),
+                    "4" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FourBlockOne),
+                    "5" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FiveBlockTwo),
                     _ => UserCommand::Invalid,
                 }
             },
