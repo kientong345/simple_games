@@ -4,6 +4,15 @@ use tokio::{self, io::AsyncBufReadExt};
 
 use crate::types;
 
+pub enum KeyType {
+
+}
+
+pub enum InputType {
+    Text(String),
+    Key(KeyType),
+}
+
 static IS_PROMPT_MODE: AtomicBool = AtomicBool::new(true);
 
 pub fn enable_prompt_mode_at(latitude: types::Latitude, longtitude: types::Longtitude) {
@@ -30,11 +39,11 @@ pub fn is_prompt_mode() -> bool {
     IS_PROMPT_MODE.load(Ordering::Acquire)
 }
 
-pub async fn get_user_input() -> String {
+pub async fn get_user_input() -> InputType {
     let mut reader = tokio::io::BufReader::new(tokio::io::stdin()).lines();
     if let Some(line) = reader.next_line().await.unwrap() {
-        line
+        InputType::Text(line)
     } else {
-        "".to_string()
+        InputType::Text("".to_string())
     }
 }

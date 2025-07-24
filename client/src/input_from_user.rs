@@ -26,33 +26,40 @@ pub trait ToUserCommand {
     fn to_user_command(self) -> UserCommand;
 }
 
-impl ToUserCommand for &str {
+impl ToUserCommand for caro_console::input::InputType {
     fn to_user_command(self) -> UserCommand {
-        let words: Vec<String>
-            = self.to_string()
-                .trim()
-                .split_whitespace()
-                .map(|s| s.to_string())
-                .collect();
-        match &*words[0] {
-            "mkroom" => {
-                match &*words[1] {
-                    "3" => UserCommand::RequestNewRoom(caro_protocol::GameRule::TicTacToe),
-                    "4" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FourBlockOne),
-                    "5" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FiveBlockTwo),
+        match self {
+            caro_console::input::InputType::Text(line) => {
+                let words: Vec<String>
+                = line.to_string()
+                    .trim()
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect();
+                match &*words[0] {
+                    "mkroom" => {
+                        match &*words[1] {
+                            "3" => UserCommand::RequestNewRoom(caro_protocol::GameRule::TicTacToe),
+                            "4" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FourBlockOne),
+                            "5" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FiveBlockTwo),
+                            _ => UserCommand::Invalid,
+                        }
+                    },
+                    "cdroom" => {
+                        let rid = words[1].parse().unwrap();
+                        UserCommand::JoinRoom(rid)
+                    },
+                    "move" => {
+                        let latitude = words[1].parse().unwrap();
+                        let longtitude = words[2].parse().unwrap();
+                        UserCommand::Move((latitude, longtitude))
+                    },
                     _ => UserCommand::Invalid,
                 }
             },
-            "cdroom" => {
-                let rid = words[1].parse().unwrap();
-                UserCommand::JoinRoom(rid)
+            caro_console::input::InputType::Key(key) => {
+                UserCommand::Invalid
             },
-            "move" => {
-                let latitude = words[1].parse().unwrap();
-                let longtitude = words[2].parse().unwrap();
-                UserCommand::Move((latitude, longtitude))
-            },
-            _ => UserCommand::Invalid,
         }
     }
 }
@@ -79,7 +86,7 @@ pub struct InputReader {
 }
 
 impl InputReader {
-    async fn get_input_line(&mut self) -> String {
+    async fn get_input(&mut self) -> caro_console::input::InputType {
         caro_console::input::get_user_input().await
     }
 }
@@ -116,7 +123,7 @@ impl CommandGetter {
             async move {
                 let target = target_clone.clone();
                 loop {
-                    let input_line = target.lock().await.input_reader.get_input_line().await;
+                    let input_line = target.lock().await.input_reader.get_input().await;
                     let cmd = input_line.to_user_command();
                     tokio::spawn(target.lock().await.action.lock().await(cmd));
                 }
