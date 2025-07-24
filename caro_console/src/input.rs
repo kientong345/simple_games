@@ -27,3 +27,7 @@ pub fn disable_prompt_mode() {
 pub fn is_prompt_mode() -> bool {
     IS_PROMPT_MODE.load(Ordering::Acquire)
 }
+
+pub fn get_user_input() -> String {
+    todo!()
+}

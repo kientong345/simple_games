@@ -1,4 +1,8 @@
-use crate::caro_protocol;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use crate::{caro_protocol, global_state};
 
 pub mod screen_entity;
 pub mod entities_factory;
@@ -9,35 +13,29 @@ pub mod game_entities;
 const SCREEN_WIDTH: usize = 10;
 const SCREEN_HEIGHT: usize = 10;
 
-#[derive(Debug, Clone, Copy)]
-pub enum ScreenState {
-    Menu,
-    InRoom,
-    InGame,
-}
-
 pub struct ScreenManager {
+    global_state: Arc<RwLock<global_state::GolbalState>>,
+
     menu_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
     room_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
     game_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
     board_entities: BoardManager,
     log_entity: Box<dyn screen_entity::ScreenEntity>,
-    state: ScreenState,
 }
 
 impl ScreenManager {
-    pub fn new() -> Self {
+    pub fn new(global_state: Arc<RwLock<global_state::GolbalState>>) -> Self {
         let menu_entities_vec = entities_factory::EntitiesFactory::get_screen_entities(entities_factory::ScreenType::Menu);
         let room_entities_vec = entities_factory::EntitiesFactory::get_screen_entities(entities_factory::ScreenType::InRoom);
         let game_entities_vec = entities_factory::EntitiesFactory::get_screen_entities(entities_factory::ScreenType::InGame);
         let log_entity = entities_factory::EntitiesFactory::get_log_entity("".to_string(), entities_factory::ScreenType::Menu);
         Self {
+            global_state,
             menu_entities_vec,
             room_entities_vec,
             game_entities_vec,
             board_entities: BoardManager::new(),
             log_entity,
-            state: ScreenState::Menu,
         }
     }
 
@@ -49,23 +47,16 @@ impl ScreenManager {
         self.board_entities.set_player_order(player_order);
     }
 
-    pub fn set_state(&mut self, state: ScreenState) {
-        self.state = state;
-    }
-
-    pub fn get_state(&self) -> ScreenState {
-        self.state
-    }
-
-    pub fn enable_prompt_mode(&self) {
-        match self.state {
-            ScreenState::Menu => {
+    pub async fn enable_prompt_mode(&self) {
+        let player_state = self.global_state.read().await.get_player_state();
+        match player_state {
+            caro_protocol::PlayerState::Logged(_) => {
                 caro_console::input::enable_prompt_mode_at(17, 63);
             },
-            ScreenState::InRoom =>  {
+            caro_protocol::PlayerState::Waiting(_) =>  {
                 caro_console::input::enable_prompt_mode_at(17, 63);
             },
-            ScreenState::InGame => {
+            caro_protocol::PlayerState::InGame(_) => {
                 caro_console::input::enable_prompt_mode_at(35, 63);
             }
         }
@@ -98,19 +89,20 @@ impl ScreenManager {
         self.board_entities.update_move_set(player1_moves, player2_moves);
     }
 
-    pub fn update(&self) {
-        match self.state {
-            ScreenState::Menu => {
+    pub async fn update(&self) {
+        let player_state = self.global_state.read().await.get_player_state();
+        match player_state {
+            caro_protocol::PlayerState::Logged(_) => {
                 for entity in self.menu_entities_vec.iter() {
                     entity.display();
                 }
             },
-            ScreenState::InRoom =>  {
+            caro_protocol::PlayerState::Waiting(_) =>  {
                 for entity in self.room_entities_vec.iter() {
                     entity.display();
                 }
             },
-            ScreenState::InGame => {
+            caro_protocol::PlayerState::InGame(_) => {
                 for entity in self.game_entities_vec.iter() {
                     entity.display();
                 }
@@ -121,31 +113,33 @@ impl ScreenManager {
 
         // relocate the command prompt
         if caro_console::input::is_prompt_mode() {
-            self.enable_prompt_mode();
+            self.enable_prompt_mode().await;
         }
     }
 
-    pub fn update_board_only(&self) {
-        match self.state {
-            ScreenState::InGame => self.board_entities.update(),
+    pub async fn update_board_only(&self) {
+        let player_state = self.global_state.read().await.get_player_state();
+        match player_state {
+            caro_protocol::PlayerState::InGame(_) => self.board_entities.update(),
             _ => ()
         }
 
         // relocate the command prompt
         if caro_console::input::is_prompt_mode() {
-            self.enable_prompt_mode();
+            self.enable_prompt_mode().await;
         }
     }
 
-    pub fn log(&mut self, content: String) {
-        match self.state {
-            ScreenState::Menu => {
+    pub async fn log(&mut self, content: String) {
+        let player_state = self.global_state.read().await.get_player_state();
+        match player_state {
+            caro_protocol::PlayerState::Logged(_) => {
                 self.log_entity = entities_factory::EntitiesFactory::get_log_entity(content, entities_factory::ScreenType::Menu);
             },
-            ScreenState::InRoom =>  {
+            caro_protocol::PlayerState::Waiting(_) =>  {
                 self.log_entity = entities_factory::EntitiesFactory::get_log_entity(content, entities_factory::ScreenType::InRoom);
             },
-            ScreenState::InGame => {
+            caro_protocol::PlayerState::InGame(_) => {
                 self.log_entity = entities_factory::EntitiesFactory::get_log_entity(content, entities_factory::ScreenType::InGame);
             }
         }
@@ -153,7 +147,7 @@ impl ScreenManager {
 
         // relocate the command prompt
         if caro_console::input::is_prompt_mode() {
-            self.enable_prompt_mode();
+            self.enable_prompt_mode().await;
         }
     }
 

@@ -1,12 +1,11 @@
 use crate::caro_protocol;
 
-
-pub struct ClientState {
+pub struct GolbalState {
     player_state: caro_protocol::PlayerState,
-    current_rid: i32,
+    current_rid: caro_protocol::RoomId,
 }
 
-impl ClientState {
+impl GolbalState {
     pub fn new() -> Self {
         Self {
             player_state: caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Disconnected),
@@ -50,11 +49,11 @@ impl ClientState {
         }
     }
 
-    pub fn set_rid(&mut self, rid: i32) {
+    pub fn set_current_rid(&mut self, rid: caro_protocol::RoomId) {
         self.current_rid = rid;
     }
 
-    pub fn get_rid(&mut self) -> i32 {
+    pub fn get_current_rid(&mut self) -> caro_protocol::RoomId {
         self.current_rid
     }
 }
