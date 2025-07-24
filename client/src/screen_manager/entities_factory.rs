@@ -17,18 +17,10 @@ pub enum BoardEntityType {
     OMoveSet((usize, usize), (usize, usize), Vec<(usize, usize)>, bool),
 }
 
-pub struct EntitiesFactory {
-
-}
+pub struct EntitiesFactory;
 
 impl EntitiesFactory {
-    pub fn new() -> Self {
-        Self {
-            
-        }
-    }
-
-    pub fn get_screen_entities(&self, screen_type: ScreenType) -> Vec<Box<dyn screen_entity::ScreenEntity>> {
+    pub fn get_screen_entities(screen_type: ScreenType) -> Vec<Box<dyn screen_entity::ScreenEntity>> {
         match screen_type {
             ScreenType::Menu => {
                 let menu_instruction_box = menu_entities::InstructionBox::new();
@@ -57,7 +49,7 @@ impl EntitiesFactory {
         }
     }
 
-    pub fn get_board_entity(&self, entity_type: BoardEntityType) -> Box<dyn screen_entity::ScreenEntity> {
+    pub fn get_board_entity(entity_type: BoardEntityType) -> Box<dyn screen_entity::ScreenEntity> {
         match entity_type {
             BoardEntityType::CoordinateLayout(vertical_range, horizontal_range) => {
                 Box::new(game_entities::CoordinateLayout::new(vertical_range, horizontal_range))
@@ -74,7 +66,7 @@ impl EntitiesFactory {
         }
     }
 
-    pub fn get_log_entity(&self, content: String, screen_type: ScreenType) -> Box<dyn screen_entity::ScreenEntity> {
+    pub fn get_log_entity(content: String, screen_type: ScreenType) -> Box<dyn screen_entity::ScreenEntity> {
         match screen_type {
             ScreenType::Menu => {
                 Box::new(menu_entities::LogBox::new(content))

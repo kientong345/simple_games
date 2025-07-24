@@ -35,13 +35,12 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            // screen_manager::print_notification("JoinedRoomAsPlayer1 in room:");
-                            // screen_manager::print_notification(&rid.to_string());
                             screen_manager.lock().await.clean();
                             screen_manager.lock().await.set_player_order(caro_protocol::PlayerOrder::Player1);
                             screen_manager.lock().await.set_state(screen_manager::ScreenState::InRoom);
                             screen_manager.lock().await.update();
-                            screen_manager.lock().await.log("JoinedRoomAsPlayer1".to_string());
+                            let log_content = "JoinedRoomAsPlayer1 in room".to_string() + &rid.to_string();
+                            screen_manager.lock().await.log(log_content);
                             screen_manager.lock().await.enable_prompt_mode();
                         },
                         caro_protocol::ConnectState::Disconnected => {
@@ -54,13 +53,12 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::Waiting(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            // screen_manager::print_notification("JoinedRoomAsPlayer2 in room:");
-                            // screen_manager::print_notification(&rid.to_string());
                             screen_manager.lock().await.clean();
                             screen_manager.lock().await.set_player_order(caro_protocol::PlayerOrder::Player2);
                             screen_manager.lock().await.set_state(screen_manager::ScreenState::InRoom);
                             screen_manager.lock().await.update();
-                            screen_manager.lock().await.log("JoinedRoomAsPlayer2".to_string());
+                            let log_content = "JoinedRoomAsPlayer2".to_string() + &rid.to_string();
+                            screen_manager.lock().await.log(log_content);
                             screen_manager.lock().await.enable_prompt_mode();
                         },
                         caro_protocol::ConnectState::Disconnected => {
@@ -80,7 +78,6 @@ async fn main() {
                         caro_protocol::ConnectState::Connected => {
                             global_state.lock().await.set_player_state(caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected));
                             global_state.lock().await.set_rid(rid);
-                            // screen_manager::print_notification("game is ready!");
                             screen_manager.lock().await.clean();
                             screen_manager.lock().await.set_state(screen_manager::ScreenState::InGame);
                             screen_manager.lock().await.update();

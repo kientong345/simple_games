@@ -1,4 +1,4 @@
-use std::{io, sync::{atomic::{AtomicBool, Ordering}, Mutex}};
+use std::{io, sync::Mutex};
 
 use crossterm;
 use ratatui;
@@ -7,12 +7,7 @@ use crate::artworks::ArtDimension;
 
 use crate::artworks;
 
-pub type Height = usize;
-pub type Width = usize;
-pub type Vertical = usize;
-pub type Horizontal = usize;
-pub type Latitude = usize;
-pub type Longtitude = usize;
+use crate::types;
 
 pub type Opacity = u8;
 
@@ -30,15 +25,15 @@ pub enum Color {
 
 #[derive(Debug, Clone)]
 pub struct DrawableBox {
-    pub coordinate: (Latitude, Longtitude),
-    pub constraint: (Height, Width),
-    pub offset: (Vertical, Horizontal),
+    pub coordinate: (types::Latitude, types::Longtitude),
+    pub constraint: (types::Height, types::Width),
+    pub offset: (types::Vertical, types::Horizontal),
     pub show_boundary_line: bool,
     pub art: String,
 }
 
-impl From<(String, Width, Latitude, Longtitude)> for DrawableBox {
-    fn from((text, max_width, latitude, longtitude): (String, Width, Latitude, Longtitude)) -> Self {
+impl From<(String, types::Width, types::Latitude, types::Longtitude)> for DrawableBox {
+    fn from((text, max_width, latitude, longtitude): (String, types::Width, types::Latitude, types::Longtitude)) -> Self {
         let art = artworks::reallign_text(text, max_width);
         let max_height = art.height();
         Self {
@@ -52,11 +47,11 @@ impl From<(String, Width, Latitude, Longtitude)> for DrawableBox {
 }
 
 trait TrimArt {
-    fn trim(self, constraint: (Height, Width), offset: (Vertical, Horizontal)) -> Vec<String>;
+    fn trim(self, constraint: (types::Height, types::Width), offset: (types::Vertical, types::Horizontal)) -> Vec<String>;
 }
 
 impl TrimArt for Vec<String> {
-    fn trim(self, constraint: (Height, Width), offset: (Vertical, Horizontal)) -> Vec<String> {
+    fn trim(self, constraint: (types::Height, types::Width), offset: (types::Vertical, types::Horizontal)) -> Vec<String> {
         let mut result = Vec::new();
         let v_off = offset.0.max(0);
         let h_off = offset.1.max(0);
@@ -75,40 +70,7 @@ impl TrimArt for Vec<String> {
     }
 }
 
-static IS_PROMPT_MODE: AtomicBool = AtomicBool::new(true);
 static CURRENT_COLOR: Mutex<Color> = Mutex::new(Color::White(100));
-
-pub fn init() {
-    
-}
-
-pub fn deinit() {
-
-}
-
-pub fn enable_prompt_mode_at(latitude: Latitude, longtitude: Longtitude) {
-    let mut stdout = io::stdout();
-    let latitude = latitude.max(0) as u16;
-    let longtitude = longtitude.max(0) as u16;
-    let _ = crossterm::terminal::disable_raw_mode();
-    let _ = crossterm::execute!(
-        stdout,
-        crossterm::cursor::Show,
-        crossterm::cursor::MoveTo(longtitude, latitude),
-    );
-    IS_PROMPT_MODE.store(true, Ordering::Release);
-}
-
-pub fn disable_prompt_mode() {
-    let mut stdout = io::stdout();
-    let _ = crossterm::terminal::enable_raw_mode();
-    let _ = crossterm::execute!(stdout, crossterm::cursor::Hide);
-    IS_PROMPT_MODE.store(false, Ordering::Release);
-}
-
-pub fn is_prompt_mode() -> bool {
-    IS_PROMPT_MODE.load(Ordering::Acquire)
-}
 
 pub fn clean_screen() {
     let mut stdout = io::stdout();
