@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use futures::future::BoxFuture;
-use tokio::{io::{self, AsyncBufReadExt}, sync::Mutex, task::JoinHandle};
+use tokio::{sync::Mutex, task::JoinHandle};
 use crate::caro_protocol;
+use caro_console;
 
 #[derive(Debug, Clone, Copy)]
 pub enum UserCommand {
@@ -68,23 +69,17 @@ macro_rules! make_input_action {
 
 pub fn get_input_reader() -> InputReader {
     InputReader {
-        reader: io::BufReader::new(io::stdin()).lines(),
-        buffer: [0; 1024],
+
     }
 }
 
 pub struct InputReader {
-    reader: io::Lines<io::BufReader<io::Stdin>>,
-    buffer: [u8; 1024],
+
 }
 
 impl InputReader {
     async fn get_input_line(&mut self) -> String {
-        if let Some(line) = self.reader.next_line().await.unwrap() {
-            line
-        } else {
-            "".to_string()
-        }
+        caro_console::input::get_user_input().await
     }
 }
 

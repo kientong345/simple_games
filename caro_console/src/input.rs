@@ -1,5 +1,7 @@
 use std::{io, sync::atomic::{AtomicBool, Ordering}};
 
+use tokio::{self, io::AsyncBufReadExt};
+
 use crate::types;
 
 static IS_PROMPT_MODE: AtomicBool = AtomicBool::new(true);
@@ -28,6 +30,11 @@ pub fn is_prompt_mode() -> bool {
     IS_PROMPT_MODE.load(Ordering::Acquire)
 }
 
-pub fn get_user_input() -> String {
-    todo!()
+pub async fn get_user_input() -> String {
+    let mut reader = tokio::io::BufReader::new(tokio::io::stdin()).lines();
+    if let Some(line) = reader.next_line().await.unwrap() {
+        line
+    } else {
+        "".to_string()
+    }
 }
