@@ -4,7 +4,7 @@ use tokio::sync::Mutex;
 use simple_caro_app::{
     caro_protocol,
     server_endpoint,
-    request_executer,
+    client_request_executor,
     game_manager,
     id_pool,
     make_action,
@@ -21,7 +21,7 @@ async fn main() {
     let gid_pool = id_pool::IdPool::new();
     let game_manager = Arc::new(Mutex::new(game_manager::GameContainer::new(256, gid_pool)));
 
-    let command_executor = Arc::new(Mutex::new(request_executer::CommandExecuter::new(player_manager.clone(),
+    let command_executor = Arc::new(Mutex::new(client_request_executor::RequestExecutor::new(player_manager.clone(),
                                                                                                                     room_manager.clone(),
                                                                                                                     game_manager.clone())));
 

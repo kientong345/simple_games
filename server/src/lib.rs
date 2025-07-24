@@ -5,4 +5,4 @@ pub mod player_tracker;
 pub mod server_endpoint;
 pub mod game_manager;
 pub mod caro_protocol;
-pub mod request_executer;
+pub mod client_request_executor;

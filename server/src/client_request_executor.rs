@@ -9,13 +9,13 @@ use crate::{
     room_manager
 };
 
-pub struct CommandExecuter {
+pub struct RequestExecutor {
     player_manager: Arc<Mutex<player_manager::PlayerContainer>>,
     room_manager: Arc<Mutex<room_manager::RoomContainer>>,
     game_manager: Arc<Mutex<game_manager::GameContainer>>,
 }
 
-impl CommandExecuter {
+impl RequestExecutor {
     pub fn new(player_manager: Arc<Mutex<player_manager::PlayerContainer>>,
                 room_manager: Arc<Mutex<room_manager::RoomContainer>>,
                 game_manager: Arc<Mutex<game_manager::GameContainer>>) -> Self {
