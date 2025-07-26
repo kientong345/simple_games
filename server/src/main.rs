@@ -2,13 +2,15 @@ use std::sync::Arc;
 
 use simple_caro_app::{
     caro_protocol,
-    server_endpoint,
     client_request_executor,
     game_manager,
     id_pool,
     make_action,
+    make_disconnected_action,
+    player_life_tracker,
     player_manager,
-    room_manager
+    room_manager,
+    server_endpoint
 };
 use tokio::sync::RwLock;
 
@@ -25,7 +27,19 @@ async fn main() {
                                                                                                                     room_manager.clone(),
                                                                                                                     game_manager.clone())));
 
-    // let mut player_tracker = PlayerTracker::new(player_manager.clone());
+    let player_tracker = Arc::new(RwLock::new(player_life_tracker::PlayerTracker::new(player_manager.clone())));
+    let executor_clone = command_executor.clone();
+    player_tracker.write().await.set_action_on_disconnect(
+        make_disconnected_action!(move |pid: caro_protocol::PlayerId| {
+            let command_executor = executor_clone.clone();
+            let future = async move {
+                command_executor.write().await.execute_request(pid, caro_protocol::PlayerCode::PlayerExitApplication).await;
+                println!("Player {} disconnected", pid);
+            };
+            Box::pin(future) as futures::future::BoxFuture<'static, ()>
+        })
+    );
+    player_life_tracker::PlayerTracker::tracking_player(player_tracker.clone()).await;
 
     let mut listener = server_endpoint::Listener::new(caro_protocol::SERVER_ADDRESS).await;
 
