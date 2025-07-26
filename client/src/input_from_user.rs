@@ -58,7 +58,14 @@ impl ToUserCommand for caro_console::input::InputType {
                 }
             },
             caro_console::input::InputType::Key(key) => {
-                UserCommand::Invalid
+                match key {
+                    caro_console::input::KeyType::Up => UserCommand::Up,
+                    caro_console::input::KeyType::Down => UserCommand::Down,
+                    caro_console::input::KeyType::Left => UserCommand::Left,
+                    caro_console::input::KeyType::Right => UserCommand::Right,
+                    caro_console::input::KeyType::Esc => UserCommand::SwitchInputMode,
+                    caro_console::input::KeyType::Invalid => UserCommand::Invalid,
+                }
             },
         }
     }

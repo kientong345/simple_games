@@ -4,10 +4,17 @@ use tokio::{self, io::AsyncBufReadExt};
 
 use crate::types;
 
+#[derive(Debug, Clone, Copy)]
 pub enum KeyType {
-
+    Up,
+    Down,
+    Left,
+    Right,
+    Esc,
+    Invalid,
 }
 
+#[derive(Debug, Clone)]
 pub enum InputType {
     Text(String),
     Key(KeyType),
@@ -40,10 +47,33 @@ pub fn is_prompt_mode() -> bool {
 }
 
 pub async fn get_user_input() -> InputType {
-    let mut reader = tokio::io::BufReader::new(tokio::io::stdin()).lines();
-    if let Some(line) = reader.next_line().await.unwrap() {
-        InputType::Text(line)
+    if is_prompt_mode() {
+        let mut reader = tokio::io::BufReader::new(tokio::io::stdin()).lines();
+        if let Some(line) = reader.next_line().await.unwrap() {
+            InputType::Text(line)
+        } else {
+            InputType::Text("".to_string())
+        }
     } else {
-        InputType::Text("".to_string())
+        // Use crossterm to read a key event in raw mode
+        loop {
+            if crossterm::event::poll(std::time::Duration::from_millis(100)).unwrap_or(false) {
+                if let crossterm::event::Event::Key(key_event) = crossterm::event::read().unwrap() {
+                    if key_event.kind == crossterm::event::KeyEventKind::Press {
+                        return InputType::Key(match key_event.code {
+                            crossterm::event::KeyCode::Up => KeyType::Up,
+                            crossterm::event::KeyCode::Down => KeyType::Down,
+                            crossterm::event::KeyCode::Left => KeyType::Left,
+                            crossterm::event::KeyCode::Right => KeyType::Right,
+                            crossterm::event::KeyCode::Esc => KeyType::Esc,
+                            _ => KeyType::Invalid,
+                        });
+                    }
+                }
+            } else {
+                // Yield to the async runtime
+                tokio::task::yield_now().await;
+            }
+        }
     }
 }

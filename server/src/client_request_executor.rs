@@ -30,6 +30,25 @@ impl RequestExecutor {
         let player_state = self.player_manager.read().await.get_player_state(pid).unwrap();
 
         // global request (regardless of owner's state)
+        self.execute_general_request(pid, code).await;
+
+        match player_state {
+            caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) => {
+                self.execute_logged_request(pid, code).await;
+            },
+            caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) => {
+                self.execute_waiting_request(pid, code).await;
+            },
+            caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) => {
+                self.execute_ingame_request(pid, code).await;
+            },
+            _ => {
+                // do nothing
+            }
+        }
+    }
+
+    async fn execute_general_request(&mut self, pid: i32, code: caro_protocol::PlayerCode) {
         match code {
             caro_protocol::PlayerCode::PlayerExitApplication => {
                 self.clean_player_existence(pid).await;
@@ -45,21 +64,6 @@ impl RequestExecutor {
             }
             _ => {
 
-            }
-        }
-
-        match player_state {
-            caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) => {
-                self.execute_logged_request(pid, code).await;
-            },
-            caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) => {
-                self.execute_waiting_request(pid, code).await;
-            },
-            caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) => {
-                self.execute_ingame_request(pid, code).await;
-            },
-            _ => {
-                // do nothing
             }
         }
     }
