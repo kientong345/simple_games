@@ -167,14 +167,14 @@ impl GameOperator {
         }
     }
 
-    fn execute_command(&mut self, player_order: PlayerOrder, cmd_code: caro_protocol::PlayerCode) -> OperationResult {
+    fn execute_command(&mut self, player_order: PlayerOrder, cmd_code: caro_protocol::InGameRequest) -> OperationResult {
         let mut is_success = false;
         let who = match player_order {
             PlayerOrder::Player1 => simple_caro::Participant::Player1,
             PlayerOrder::Player2 => simple_caro::Participant::Player2,
         };
         match cmd_code {
-            caro_protocol::PlayerCode::PlayerMove((latitude, longtitude)) => {
+            caro_protocol::InGameRequest::PlayerMove((latitude, longtitude)) => {
                 let pos = simple_caro::Coordinate {latitude, longtitude};
                 let result = self.game.player_move(who, pos);
                 match result {
@@ -187,7 +187,7 @@ impl GameOperator {
                     }
                 }
             }
-            caro_protocol::PlayerCode::PlayerUndo => {
+            caro_protocol::InGameRequest::PlayerUndo => {
                 let result = self.game.player_undo(who);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -198,7 +198,7 @@ impl GameOperator {
                     }
                 }
             }
-            caro_protocol::PlayerCode::PlayerRedo => {
+            caro_protocol::InGameRequest::PlayerRedo => {
                 let result = self.game.player_redo(who);
                 match result {
                     simple_caro::MoveResult::Success => {
@@ -209,9 +209,12 @@ impl GameOperator {
                     }
                 }
             }
-            _ => {
-                // do not process other requests
-            }
+            caro_protocol::InGameRequest::PlayerLeaveRoom => {
+                
+            },
+            caro_protocol::InGameRequest::PlayerRequestContext => {
+
+            },
         }
         
         if is_success {
@@ -288,7 +291,7 @@ impl GameContainer {
         }
     }
 
-    pub fn execute_command_in_game(&mut self, gid: caro_protocol::GameId, player_order: PlayerOrder, cmd_code: caro_protocol::PlayerCode) -> Option<OperationResult> {
+    pub fn execute_command_in_game(&mut self, gid: caro_protocol::GameId, player_order: PlayerOrder, cmd_code: caro_protocol::InGameRequest) -> Option<OperationResult> {
         if let Some(game) = self.games_set.get_mut(&gid) {
             Some(game.execute_command(player_order, cmd_code))
         } else {

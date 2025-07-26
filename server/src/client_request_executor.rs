@@ -26,49 +26,48 @@ impl RequestExecutor {
         }
     }
 
-    pub async fn execute_request(&mut self, pid: i32, code: caro_protocol::PlayerCode) {
+    pub async fn execute_request(&mut self, pid: i32, request_type: caro_protocol::PlayerCode) {
         let player_state = self.player_manager.read().await.get_player_state(pid).unwrap();
-
-        // global request (regardless of owner's state)
-        self.execute_general_request(pid, code).await;
-
-        match player_state {
-            caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) => {
-                self.execute_logged_request(pid, code).await;
+        match request_type {
+            caro_protocol::PlayerCode::General(code) => {
+                self.execute_general_request(pid, code).await;
             },
-            caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) => {
-                self.execute_waiting_request(pid, code).await;
+            caro_protocol::PlayerCode::Logged(code) => {
+                if player_state == caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) {
+                    self.execute_logged_request(pid, code).await;
+                }
             },
-            caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) => {
-                self.execute_ingame_request(pid, code).await;
+            caro_protocol::PlayerCode::InRoom(code) => {
+                if player_state == caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) {
+                    self.execute_inroom_request(pid, code).await;
+                }
             },
-            _ => {
-                // do nothing
-            }
+            caro_protocol::PlayerCode::InGame(code) => {
+                if player_state == caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) {
+                    self.execute_ingame_request(pid, code).await;
+                }
+            },
         }
     }
 
-    async fn execute_general_request(&mut self, pid: i32, code: caro_protocol::PlayerCode) {
+    async fn execute_general_request(&mut self, pid: i32, code: caro_protocol::GeneralRequest) {
         match code {
-            caro_protocol::PlayerCode::PlayerExitApplication => {
+            caro_protocol::GeneralRequest::PlayerExitApplication => {
                 self.clean_player_existence(pid).await;
             },
-            caro_protocol::PlayerCode::PlayerRequestState => {
+            caro_protocol::GeneralRequest::PlayerRequestState => {
                 let player_state = self.player_manager.read().await.get_player_state(pid).unwrap();
-                let code = caro_protocol::ServerCode::State(player_state);
+                let code = caro_protocol::ServerCode::General(caro_protocol::GeneralResponse::State(player_state));
                 let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                 self.player_manager.write().await.response(pid, new_packet).await;
             }
-            caro_protocol::PlayerCode::IAmAlive => {
+            caro_protocol::GeneralRequest::IAmAlive => {
                 self.player_manager.write().await.mark_as_responsed_to_checkalive(pid);
-            }
-            _ => {
-
             }
         }
     }
 
-    async fn execute_logged_request(&mut self, pid: i32, code: caro_protocol::PlayerCode) {
+    async fn execute_logged_request(&mut self, pid: i32, code: caro_protocol::LoggedRequest) {
         let room_manager_clone = self.room_manager.clone();
         let player_manager_clone = self.player_manager.clone();
         let game_manager_clone = self.game_manager.clone();
@@ -76,7 +75,7 @@ impl RequestExecutor {
             let gid = game_manager_clone.read().await.find_game_contain_room(rid).unwrap();
             game_manager_clone.write().await.try_start_game(gid);
             let (pid1, pid2) = room_manager_clone.read().await.get_pids_in_room(rid).unwrap();
-            let code = caro_protocol::ServerCode::YourRoomIsFull(rid);
+            let code = caro_protocol::ServerCode::InRoom(caro_protocol::InRoomResponse::YourRoomIsFull(rid));
             let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
             tokio::time::sleep(std::time::Duration::from_millis(1)).await;
             player_manager_clone.write().await.response(pid1, new_packet.clone()).await;
@@ -88,23 +87,23 @@ impl RequestExecutor {
         };
 
         match code {
-            caro_protocol::PlayerCode::RequestRoomAsPlayer1(rule_type) => {
+            caro_protocol::LoggedRequest::RequestRoomAsPlayer1(rule_type) => {
                 let new_rid = self.room_manager.write().await.add_room(rule_type);
                 if new_rid == -1 {
-                    let code = caro_protocol::ServerCode::FailedToCreateRoom;
+                    let code = caro_protocol::ServerCode::Logged(caro_protocol::LoggedResponse::FailedToCreateRoom);
                     let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                     self.player_manager.write().await.response(pid, new_packet).await;
                     return;
                 }
                 let _result = self.room_manager.write().await.add_player_to_room(new_rid, room_manager::PlayerOrder::Player1(pid));
                 if !_result {
-                    let code = caro_protocol::ServerCode::FailedToJoinRoom(new_rid);
+                    let code = caro_protocol::ServerCode::Logged(caro_protocol::LoggedResponse::FailedToJoinRoom(new_rid));
                     let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                     self.player_manager.write().await.response(pid, new_packet).await;
                 } else {
                     let _new_gid = self.game_manager.write().await.add_game(new_rid, rule_type);
                     self.player_manager.write().await.set_player_state(pid, caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected));
-                    let code = caro_protocol::ServerCode::JoinedRoomAsPlayer1(new_rid);
+                    let code = caro_protocol::ServerCode::Logged(caro_protocol::LoggedResponse::JoinedRoomAsPlayer1(new_rid));
                     let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                     self.player_manager.write().await.response(pid, new_packet).await;
                     if self.room_manager.read().await.room_full(new_rid) {
@@ -112,16 +111,16 @@ impl RequestExecutor {
                     }
                 }
             },
-            caro_protocol::PlayerCode::JoinRoom(rid) => {
+            caro_protocol::LoggedRequest::JoinRoom(rid) => {
                 let _result = self.room_manager.write().await.add_player_to_room(rid, room_manager::PlayerOrder::Player2(pid));
                 self.player_manager.write().await.set_player_state(pid, caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected));
                 let (pid1, pid2) = self.room_manager.read().await.get_pids_in_room(rid).unwrap();
                 let code = if pid == pid1 {
-                    caro_protocol::ServerCode::JoinedRoomAsPlayer1(rid)
+                    caro_protocol::ServerCode::Logged(caro_protocol::LoggedResponse::JoinedRoomAsPlayer1(rid))
                 } else if pid == pid2 {
-                    caro_protocol::ServerCode::JoinedRoomAsPlayer2(rid)
+                    caro_protocol::ServerCode::Logged(caro_protocol::LoggedResponse::JoinedRoomAsPlayer2(rid))
                 } else {
-                    caro_protocol::ServerCode::FailedToJoinRoom(rid)
+                    caro_protocol::ServerCode::Logged(caro_protocol::LoggedResponse::FailedToJoinRoom(rid))
                 };
                 let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                 self.player_manager.write().await.response(pid, new_packet).await;
@@ -129,15 +128,12 @@ impl RequestExecutor {
                     room_full_actions(rid).await;
                 }
             },
-            _ => {
-                // do not process other requests
-            }
         }
     }  
 
-    async fn execute_waiting_request(&mut self, pid: i32, code: caro_protocol::PlayerCode) {
+    async fn execute_inroom_request(&mut self, pid: i32, code: caro_protocol::InRoomRequest) {
         match code {
-            caro_protocol::PlayerCode::PlayerLeaveRoom => {
+            caro_protocol::InRoomRequest::PlayerLeaveRoom => {
                 let rid = self.room_manager.read().await.find_room_contain_player(pid).unwrap();
                 self.room_manager.write().await.remove_player_from_room(rid, pid);
                 let room_empty = self.room_manager.read().await.room_empty(rid);
@@ -145,18 +141,15 @@ impl RequestExecutor {
                     self.room_manager.write().await.remove_room(rid);
                 }
             },
-            _ => {
-                // do nothing
-            }
         }
     }
 
-    async fn execute_ingame_request(&mut self, pid: i32, code: caro_protocol::PlayerCode) {
+    async fn execute_ingame_request(&mut self, pid: i32, code: caro_protocol::InGameRequest) {
         let rid = self.room_manager.read().await.find_room_contain_player(pid).unwrap();
         let gid = self.game_manager.read().await.find_game_contain_room(rid).unwrap();
 
         match code {
-            caro_protocol::PlayerCode::PlayerLeaveRoom => {
+            caro_protocol::InGameRequest::PlayerLeaveRoom => {
                 self.room_manager.write().await.remove_player_from_room(rid, pid);
                 let room_empty = self.room_manager.read().await.room_empty(rid);
                 if room_empty {
@@ -164,7 +157,7 @@ impl RequestExecutor {
                     self.room_manager.write().await.remove_room(rid);
                 }
             },
-            caro_protocol::PlayerCode::PlayerRequestContext => {
+            caro_protocol::InGameRequest::PlayerRequestContext => {
                 self.response_game_context(pid).await;
             },
             _ => {
@@ -235,7 +228,8 @@ impl RequestExecutor {
             receiver_order,
         };
 
-        let new_message_packet = caro_protocol::MessagePacket::new_server_packet(caro_protocol::ServerCode::Context(game_context.clone()));
+        let code = caro_protocol::ServerCode::InGame(caro_protocol::InGameResponse::Context(game_context));
+        let new_message_packet = caro_protocol::MessagePacket::new_server_packet(code);
         self.player_manager.write().await.response(pid, new_message_packet).await;
     }
 

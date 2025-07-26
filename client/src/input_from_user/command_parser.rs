@@ -1,6 +1,5 @@
 use crate::{caro_protocol, input_from_user::{GeneralCommand, InGameCommand, LoggedCommand, UserCommand}};
 
-
 pub trait ToUserCommand {
     fn to_user_command(self) -> UserCommand;
 }

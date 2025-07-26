@@ -7,24 +7,24 @@ use caro_console;
 
 pub mod command_parser;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GeneralCommand {
     ExitApplication,
     Invalid,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoggedCommand {
     RequestNewRoom(caro_protocol::GameRule),
     JoinRoom(caro_protocol::RoomId),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InRoomCommand {
     LeaveRoom,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InGameCommand {
     Move(caro_protocol::Coordinate),
     Up,
@@ -37,7 +37,7 @@ pub enum InGameCommand {
     LeaveRoom,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UserCommand {
     General(GeneralCommand),
     Logged(LoggedCommand),

@@ -11,21 +11,21 @@ pub type GameId = i32;
 pub type Coordinate = (Latitude, Longtitude);
 pub type Row = Vec<TileState>;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum GameRule {
     TicTacToe,
     FourBlockOne,
     FiveBlockTwo,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TileState {
     Empty,
     Player1,
     Player2,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum GameState {
     Player1Turn,
     Player2Turn,
@@ -35,20 +35,20 @@ pub enum GameState {
     NotInprogress,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ConnectState {
     Connected,
     Disconnected,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PlayerState {
     Logged(ConnectState),
     InRoom(ConnectState),
     InGame(ConnectState),
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PlayerOrder {
     Player1,
     Player2,
@@ -68,40 +68,75 @@ pub struct GameContext {
     pub receiver_order: PlayerOrder,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum PlayerCode {
-    // pregame
-    RequestRoomAsPlayer1(GameRule),
-    JoinRoom(RoomId),
-    // ingame
-    PlayerMove(Coordinate),
-    PlayerUndo,
-    PlayerRedo,
-    PlayerRequestContext,
-    // global
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GeneralRequest {
     PlayerRequestState,
-    PlayerLeaveRoom,
     PlayerExitApplication,
     // response to check alive
     IAmAlive,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ServerCode {
-    // pregame
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum LoggedRequest {
+    RequestRoomAsPlayer1(GameRule),
+    JoinRoom(RoomId),
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum InRoomRequest {
+    PlayerLeaveRoom,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum InGameRequest {
+    PlayerMove(Coordinate),
+    PlayerUndo,
+    PlayerRedo,
+    PlayerRequestContext,
+    PlayerLeaveRoom,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PlayerCode {
+    General(GeneralRequest),
+    Logged(LoggedRequest),
+    InRoom(InRoomRequest),
+    InGame(InGameRequest),
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GeneralResponse {
+    State(PlayerState),
+    // check alive
+    AreYouAlive,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum LoggedResponse {
     JoinedRoomAsPlayer1(RoomId),
     JoinedRoomAsPlayer2(RoomId),
     FailedToCreateRoom,
     FailedToJoinRoom(RoomId),
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum InRoomResponse {
     YourRoomIsFull(RoomId),
-    // ingame
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum InGameResponse {
     MoveSuccess,
     MoveUnsuccess,
     Context(GameContext),
-    // global
-    State(PlayerState),
-    // check alive
-    AreYouAlive,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerCode {
+    General(GeneralResponse),
+    Logged(LoggedResponse),
+    InRoom(InRoomResponse),
+    InGame(InGameResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

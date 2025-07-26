@@ -3,7 +3,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::{caro_protocol, client_endpoint, global_state, input_from_user, output_to_user};
+use crate::
+{
+    caro_protocol,
+    client_endpoint,
+    global_state,
+    input_from_user,
+    output_to_user
+};
 
 pub struct CommandExecutor {
     global_state: Arc<RwLock<global_state::GlobalState>>,
@@ -29,13 +36,19 @@ impl CommandExecutor {
                 self.execute_general_command(command).await;
             },
             input_from_user::UserCommand::Logged(command) => {
-                self.execute_logged_command(command).await;
+                if current_state == caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) {
+                    self.execute_logged_command(command).await;
+                }
             },
             input_from_user::UserCommand::InRoom(command) => {
-                self.execute_inroom_command(command).await;
+                if current_state == caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) {
+                    self.execute_inroom_command(command).await;
+                }
             },
             input_from_user::UserCommand::InGame(command) => {
-                self.execute_ingame_command(command).await;
+                if current_state == caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) {
+                    self.execute_ingame_command(command).await;
+                }
             },
         }
     }
@@ -56,19 +69,19 @@ impl CommandExecutor {
             input_from_user::LoggedCommand::RequestNewRoom(game_rule) => {
                 match game_rule {
                     caro_protocol::GameRule::TicTacToe => {
-                        let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::TicTacToe);
+                        let code = caro_protocol::PlayerCode::Logged(caro_protocol::LoggedRequest::RequestRoomAsPlayer1(caro_protocol::GameRule::TicTacToe));
                         let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                         // println!("send: {:?}", new_packet);
                         self.requester.write().await.send_request(new_packet).await;
                     },
                     caro_protocol::GameRule::FourBlockOne => {
-                        let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::FourBlockOne);
+                        let code = caro_protocol::PlayerCode::Logged(caro_protocol::LoggedRequest::RequestRoomAsPlayer1(caro_protocol::GameRule::FourBlockOne));
                         let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                         // println!("send: {:?}", new_packet);
                         self.requester.write().await.send_request(new_packet).await;
                     },
                     caro_protocol::GameRule::FiveBlockTwo => {
-                        let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::FiveBlockTwo);
+                        let code = caro_protocol::PlayerCode::Logged(caro_protocol::LoggedRequest::RequestRoomAsPlayer1(caro_protocol::GameRule::FiveBlockTwo));
                         let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                         // println!("send: {:?}", new_packet);
                         self.requester.write().await.send_request(new_packet).await;
@@ -76,7 +89,7 @@ impl CommandExecutor {
                 }
             },
             input_from_user::LoggedCommand::JoinRoom(rid) => {
-                let code = caro_protocol::PlayerCode::JoinRoom(rid);
+                let code = caro_protocol::PlayerCode::Logged(caro_protocol::LoggedRequest::JoinRoom(rid));
                 let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                 // println!("send: {:?}", new_packet);
                 self.requester.write().await.send_request(new_packet).await;
@@ -96,7 +109,7 @@ impl CommandExecutor {
         match command {
             input_from_user::InGameCommand::Move(coor) => {
                 let coor = (coor.0, coor.1);
-                let code = caro_protocol::PlayerCode::PlayerMove(coor);
+                let code = caro_protocol::PlayerCode::InGame(caro_protocol::InGameRequest::PlayerMove(coor));
                 let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                 // println!("send: {:?}", new_packet);
                 self.requester.write().await.send_request(new_packet).await;

@@ -94,7 +94,7 @@ impl Player {
 
     async fn send_checkalive_message(&mut self) {
         self.responsed_to_checkalive = false;
-        let code = caro_protocol::ServerCode::AreYouAlive;
+        let code = caro_protocol::ServerCode::General(caro_protocol::GeneralResponse::AreYouAlive);
         let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
         self.response(new_packet).await;
     }
