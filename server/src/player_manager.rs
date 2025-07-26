@@ -12,6 +12,8 @@ struct Player {
     responser: server_endpoint::Responser,
     request_getter: Arc<Mutex<server_endpoint::RequestGetter>>,
     response_handler: Option<Arc<Mutex<server_endpoint::ResponseHandler>>>,
+
+    responsed_to_checkalive: bool,
 }
 
 impl Player {
@@ -23,6 +25,7 @@ impl Player {
             responser,
             request_getter,
             response_handler: None,
+            responsed_to_checkalive: false,
         }
     }
 
@@ -66,22 +69,30 @@ impl Player {
         }
     }
 
-    fn check_alive(&self) -> bool {
-        // Here you would typically check if the stream is still open
-        // For example:
-        // self.stream.peek(&mut [0; 1]).is_ok()
-        true // Placeholder for actual implementation
+    async fn send_checkalive_message(&mut self) {
+        self.responsed_to_checkalive = false;
+        let code = caro_protocol::ServerCode::AreYouAlive;
+        let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
+        self.response(new_packet).await;
+    }
+
+    fn mark_as_responsed_to_checkalive(&mut self) {
+        self.responsed_to_checkalive = true;
+    }
+
+    fn is_responsed_to_checkalive(&self) -> bool {
+        self.responsed_to_checkalive
     }
 }
 
 pub struct PlayerContainer {
     players_map: HashMap<caro_protocol::PlayerId, Player>,
     max_player: usize,
-    pid_pool: id_pool::IdPool,
+    pid_pool: id_pool::IdPool<i32>,
 }
 
 impl PlayerContainer {
-    pub fn new(max_player: usize, pid_pool: id_pool::IdPool) -> Self {
+    pub fn new(max_player: usize, pid_pool: id_pool::IdPool<i32>) -> Self {
         Self {
             players_map: HashMap::new(),
             max_player,
@@ -146,15 +157,32 @@ impl PlayerContainer {
         }
     }
 
-    pub fn check_alive(&self, pid: caro_protocol::PlayerId) -> bool {
-        if let Some(player) = self.players_map.get(&pid) {
-            player.check_alive()
+    pub fn player_exist(&self, pid: caro_protocol::PlayerId) -> bool {
+        self.players_map.contains_key(&pid)
+    }
+
+    pub async fn send_checkalive_message(&mut self, pid: caro_protocol::PlayerId) -> bool {
+        if let Some(player) = self.players_map.get_mut(&pid) {
+            player.send_checkalive_message().await;
+            true
         } else {
             false
         }
     }
 
-    pub fn player_exist(&self, pid: caro_protocol::PlayerId) -> bool {
-        self.players_map.contains_key(&pid)
+    pub fn mark_as_responsed_to_checkalive(&mut self, pid: caro_protocol::PlayerId) {
+        if let Some(player) = self.players_map.get_mut(&pid) {
+            player.mark_as_responsed_to_checkalive();
+        }
     }
+
+    pub fn is_responsed_to_checkalive(&self, pid: caro_protocol::PlayerId) -> bool {
+        if let Some(player) = self.players_map.get(&pid) {
+            player.is_responsed_to_checkalive()
+        } else {
+            false
+        }
+    }
+
+
 }

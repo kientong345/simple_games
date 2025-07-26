@@ -4,23 +4,32 @@ use std::sync::Arc;
 
 use tokio::sync::{Mutex, RwLock};
 
-use crate::{caro_protocol, global_state, output_to_user};
+use crate::{caro_protocol, client_endpoint, global_state, output_to_user};
 
 pub struct ResponseExecutor {
     global_state: Arc<RwLock<global_state::GolbalState>>,
     screen_manager: Arc<Mutex<output_to_user::ScreenManager>>,
+    requester: Arc<Mutex<client_endpoint::Requester>>,
 }
 
 impl ResponseExecutor {
-    pub fn new(global_state: Arc<RwLock<global_state::GolbalState>>, screen_manager: Arc<Mutex<output_to_user::ScreenManager>>) -> Self {
+    pub fn new(global_state: Arc<RwLock<global_state::GolbalState>>,
+                screen_manager: Arc<Mutex<output_to_user::ScreenManager>>,
+                requester: Arc<Mutex<client_endpoint::Requester>>,) -> Self {
         Self {
             global_state,
             screen_manager,
+            requester,
         }
     }
 
     pub async fn execute_response(&mut self, code: caro_protocol::ServerCode) {
         match code {
+            caro_protocol::ServerCode::AreYouAlive => {
+                let code = caro_protocol::PlayerCode::IAmAlive;
+                let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
+                self.requester.lock().await.send_request(new_packet).await;
+            },
             caro_protocol::ServerCode::JoinedRoomAsPlayer1(rid) => {
                 let conn_state = self.global_state.read().await.get_connection_state();
                 match conn_state {

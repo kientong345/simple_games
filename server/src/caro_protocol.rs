@@ -82,6 +82,8 @@ pub enum PlayerCode {
     PlayerRequestState,
     PlayerLeaveRoom,
     PlayerExitApplication,
+    // response to check alive
+    IAmAlive,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,6 +100,8 @@ pub enum ServerCode {
     Context(GameContext),
     // global
     State(PlayerState),
+    // check alive
+    AreYouAlive,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -14,11 +14,11 @@ use simple_caro_app::{
 
 #[tokio::main]
 async fn main() {
-    let pid_pool = id_pool::IdPool::new();
+    let pid_pool = id_pool::IdPool::<i32>::new();
     let player_manager = Arc::new(Mutex::new(player_manager::PlayerContainer::new(256, pid_pool)));
-    let rid_pool = id_pool::IdPool::new();
+    let rid_pool = id_pool::IdPool::<i32>::new();
     let room_manager = Arc::new(Mutex::new(room_manager::RoomContainer::new(256, rid_pool)));
-    let gid_pool = id_pool::IdPool::new();
+    let gid_pool = id_pool::IdPool::<i32>::new();
     let game_manager = Arc::new(Mutex::new(game_manager::GameContainer::new(256, gid_pool)));
 
     let command_executor = Arc::new(Mutex::new(client_request_executor::RequestExecutor::new(player_manager.clone(),

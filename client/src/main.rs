@@ -16,7 +16,7 @@ async fn main() {
 
     let screen_manager = Arc::new(Mutex::new(output_to_user::ScreenManager::new(global_state.clone())));
 
-    let response_executor = Arc::new(Mutex::new(server_response_executor::ResponseExecutor::new(global_state.clone(), screen_manager.clone())));
+    let response_executor = Arc::new(Mutex::new(server_response_executor::ResponseExecutor::new(global_state.clone(), screen_manager.clone(), requester.clone())));
     let command_executor = Arc::new(Mutex::new(user_command_executor::CommandExecutor::new(global_state.clone(), screen_manager.clone(), requester.clone())));
 
     screen_manager.lock().await.clean();

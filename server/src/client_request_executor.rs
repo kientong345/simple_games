@@ -40,6 +40,9 @@ impl RequestExecutor {
                 let new_packet = caro_protocol::MessagePacket::new_server_packet(code);
                 self.player_manager.lock().await.response(pid, new_packet).await;
             }
+            caro_protocol::PlayerCode::IAmAlive => {
+                self.player_manager.lock().await.mark_as_responsed_to_checkalive(pid);
+            }
             _ => {
 
             }

@@ -63,11 +63,11 @@ impl GameRoom {
 pub struct RoomContainer {
     rooms_set: HashMap<caro_protocol::RoomId, GameRoom>,
     max_rooms: usize,
-    rid_pool: id_pool::IdPool,
+    rid_pool: id_pool::IdPool<i32>,
 }
 
 impl RoomContainer {
-    pub fn new(max_rooms: usize, rid_pool: id_pool::IdPool) -> Self {
+    pub fn new(max_rooms: usize, rid_pool: id_pool::IdPool<i32>) -> Self {
         Self {
             rooms_set: HashMap::new(),
             max_rooms,

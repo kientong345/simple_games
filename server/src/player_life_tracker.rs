@@ -1,30 +1,20 @@
-// use std::{collections::HashMap, sync::{Arc, Mutex}};
+use std::sync::Arc;
 
-// use crate::player_manager::{PlayerContainer};
+use tokio::sync::Mutex;
 
-// pub struct PlayerTracker {
-//     player_manager: Arc<Mutex<PlayerContainer>>,
-//     track_list: Arc<Mutex<HashMap<i32, (fn(), fn())>>>,
-// }
+use crate::player_manager;
 
-// impl PlayerTracker {
-//     pub fn new(player_manager: Arc<Mutex<PlayerContainer>>) -> Self {
-//         let player_manager_clone = player_manager.clone();
-//         let track_list = Arc::new(Mutex::new(HashMap::new()));
+pub struct PlayerTracker {
+    player_manager: Arc<Mutex<player_manager::PlayerContainer>>,
+}
 
-//         // Spawn a thread to monitor player connections
-
-//         Self {
-//             player_manager,
-//             track_list,
-//         }
-//     }
-
-//     pub fn track_player(&mut self, pid: i32, callback_when_disconnect: fn(), callback_when_reconnect: fn()) {
-//         let mut list = self.track_list.lock().unwrap();
-//         list.insert(pid, (callback_when_disconnect, callback_when_reconnect));
-//     }
-// }
+impl PlayerTracker {
+    pub fn new(player_manager: Arc<Mutex<player_manager::PlayerContainer>>) -> Self {
+        Self {
+            player_manager,
+        }
+    }
+}
 
 // pub struct PlayerTracker {
 //     player_manager: Arc<Mutex<PlayerManager>>,

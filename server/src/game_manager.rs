@@ -229,11 +229,11 @@ impl GameOperator {
 pub struct GameContainer {
     games_set: HashMap<caro_protocol::GameId, GameOperator>,
     max_games: usize,
-    gid_pool: id_pool::IdPool,
+    gid_pool: id_pool::IdPool<i32>,
 }
 
 impl GameContainer {
-    pub fn new(max_games: usize, gid_pool: id_pool::IdPool) -> Self {
+    pub fn new(max_games: usize, gid_pool: id_pool::IdPool<i32>) -> Self {
         Self {
             games_set: HashMap::<caro_protocol::GameId, GameOperator>::new(),
             max_games,
