@@ -33,7 +33,7 @@ async fn main() {
         make_disconnected_action!(move |pid: caro_protocol::PlayerId| {
             let command_executor = executor_clone.clone();
             let future = async move {
-                command_executor.write().await.execute_request(pid, caro_protocol::PlayerCode::PlayerExitApplication).await;
+                command_executor.write().await.clean_player_existence(pid).await;
                 println!("Player {} disconnected", pid);
             };
             Box::pin(future) as futures::future::BoxFuture<'static, ()>

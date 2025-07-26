@@ -235,7 +235,7 @@ impl RequestExecutor {
         self.player_manager.write().await.response(pid, new_message_packet).await;
     }
 
-    async fn clean_player_existence(&mut self, pid: i32) {
+    pub async fn clean_player_existence(&mut self, pid: i32) {
         let rid = self.room_manager.read().await.find_room_contain_player(pid).unwrap();
         let gid = self.game_manager.read().await.find_game_contain_room(rid).unwrap();
         self.room_manager.write().await.remove_player_from_room(rid, pid);
