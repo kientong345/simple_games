@@ -1,4 +1,4 @@
-use std::{io, sync::Mutex};
+use std::{io, sync::RwLock};
 
 use crossterm;
 use ratatui;
@@ -70,7 +70,7 @@ impl TrimArt for Vec<String> {
     }
 }
 
-static CURRENT_COLOR: Mutex<Color> = Mutex::new(Color::White(100));
+static CURRENT_COLOR: RwLock<Color> = RwLock::new(Color::White(100));
 
 pub fn clean_screen() {
     let mut stdout = io::stdout();
@@ -93,12 +93,12 @@ pub fn set_pen_color(color: Color) {
         Color::Cyan(_) => crossterm::execute!(stdout, crossterm::style::SetForegroundColor(crossterm::style::Color::Cyan)),
         Color::Magenta(_) => crossterm::execute!(stdout, crossterm::style::SetForegroundColor(crossterm::style::Color::Magenta)),
     };
-    let mut current_color = CURRENT_COLOR.lock().unwrap();
+    let mut current_color = CURRENT_COLOR.write().unwrap();
     *current_color = color;
 }
 
 pub fn get_pen_color() -> Color {
-    let current_color = CURRENT_COLOR.lock().unwrap();
+    let current_color = CURRENT_COLOR.read().unwrap();
     *current_color
 }
 

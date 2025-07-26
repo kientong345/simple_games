@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use futures::future::BoxFuture;
-use tokio::{sync::Mutex, task::JoinHandle};
+use tokio::{sync::RwLock, task::JoinHandle};
 use crate::caro_protocol;
 use caro_console;
 
@@ -64,14 +64,14 @@ impl ToUserCommand for caro_console::input::InputType {
     }
 }
 
-pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(UserCommand) -> BoxFuture<'static, ()> + Send + 'static>>;
+pub type HandleAction = Arc<tokio::sync::RwLock<dyn FnMut(UserCommand) -> BoxFuture<'static, ()> + Send + Sync + 'static>>;
 
 pub type InputHandler = JoinHandle<()>;
 
 #[macro_export]
 macro_rules! make_input_action {
     ($action:expr) => {
-        Arc::new(tokio::sync::Mutex::new($action)) as crate::input_from_user::HandleAction
+        Arc::new(tokio::sync::RwLock::new($action)) as crate::input_from_user::HandleAction
     };
 }
 
@@ -117,15 +117,15 @@ impl CommandGetter {
         self.action.clone()
     }
 
-    pub async fn handling_input(target: Arc<Mutex<CommandGetter>>) -> InputHandler {
+    pub async fn handling_input(target: Arc<RwLock<CommandGetter>>) -> InputHandler {
         let target_clone = target.clone();
         tokio::spawn(
             async move {
                 let target = target_clone.clone();
                 loop {
-                    let input_line = target.lock().await.input_reader.get_input().await;
+                    let input_line = target.write().await.input_reader.get_input().await;
                     let cmd = input_line.to_user_command();
-                    tokio::spawn(target.lock().await.action.lock().await(cmd));
+                    tokio::spawn(target.read().await.action.write().await(cmd));
                 }
             }
         )

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::Mutex;
+
+use tokio::sync::RwLock;
 
 use crate::{
     server_endpoint,
@@ -10,8 +11,8 @@ use crate::{
 struct Player {
     state: caro_protocol::PlayerState,
     responser: server_endpoint::Responser,
-    request_getter: Arc<Mutex<server_endpoint::RequestGetter>>,
-    response_handler: Option<Arc<Mutex<server_endpoint::ResponseHandler>>>,
+    request_getter: Arc<RwLock<server_endpoint::RequestGetter>>,
+    response_handler: Option<Arc<RwLock<server_endpoint::ResponseHandler>>>,
 
     responsed_to_checkalive: bool,
 }
@@ -19,7 +20,7 @@ struct Player {
 impl Player {
     fn new(receiver: server_endpoint::Receiver, sender: server_endpoint::Sender) -> Self {
         let responser = server_endpoint::Responser::new(sender);
-        let request_getter = Arc::new(Mutex::new(server_endpoint::RequestGetter::new(receiver)));
+        let request_getter = Arc::new(RwLock::new(server_endpoint::RequestGetter::new(receiver)));
         Self {
             state: caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected),
             responser,
@@ -38,11 +39,11 @@ impl Player {
     }
 
     async fn set_action_on_request(&mut self, action: server_endpoint::HandleAction) {
-        self.request_getter.lock().await.set_action_on_request(action);
+        self.request_getter.write().await.set_action_on_request(action);
     }
 
     async fn get_action_on_request(&self) -> server_endpoint::HandleAction {
-        self.request_getter.lock().await.get_action_on_request()
+        self.request_getter.read().await.get_action_on_request()
     }
 
     async fn response(&mut self, message: caro_protocol::MessagePacket) {
@@ -52,7 +53,7 @@ impl Player {
 
     async fn handling_request(&mut self) -> bool {
         if self.response_handler.is_none() {
-            self.response_handler = Some(Arc::new(Mutex::new(server_endpoint::RequestGetter::handling_request(self.request_getter.clone()).await)));
+            self.response_handler = Some(Arc::new(RwLock::new(server_endpoint::RequestGetter::handling_request(self.request_getter.clone()).await)));
             true
         } else {
             false

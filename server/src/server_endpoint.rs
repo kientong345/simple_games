@@ -1,21 +1,21 @@
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-use tokio::sync::Mutex;
 use tokio::net::TcpListener;
 use futures::future::BoxFuture;
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
 use crate::caro_protocol::{self, ToMessagePacket};
 
-pub type HandleAction = Arc<tokio::sync::Mutex<dyn FnMut(caro_protocol::MessagePacket) -> BoxFuture<'static, ()> + Send + 'static>>;
+pub type HandleAction = Arc<tokio::sync::RwLock<dyn FnMut(caro_protocol::MessagePacket) -> BoxFuture<'static, ()> + Send + Sync + 'static>>;
 
 pub type ResponseHandler = JoinHandle<()>;
 
 #[macro_export]
 macro_rules! make_action {
     ($action:expr) => {
-        Arc::new(tokio::sync::Mutex::new($action)) as crate::server_endpoint::HandleAction
+        Arc::new(tokio::sync::RwLock::new($action)) as crate::server_endpoint::HandleAction
     };
 }
 
@@ -108,26 +108,26 @@ impl RequestGetter {
         self.action.clone()
     }
 
-    pub async fn handling_request(target: Arc<Mutex<RequestGetter>>) -> ResponseHandler {
+    pub async fn handling_request(target: Arc<RwLock<RequestGetter>>) -> ResponseHandler {
         let target_clone = target.clone();
         tokio::spawn(
             async move {
                 let target = target_clone.clone();
                 loop {
-                    let (msg, bytesread) = target.lock().await.receiver.receive().await;
+                    let (msg, bytesread) = target.write().await.receiver.receive().await;
                     if bytesread == 0 {
                         break;
                     }
                     println!("recv {:?}", msg);
                     let msg = msg.to_message_packet();
-                    tokio::spawn(target.lock().await.action.lock().await(msg));
+                    tokio::spawn(target.read().await.action.write().await(msg));
                 }
             }
         )
     }
 
-    pub async fn stop_handling_request(handler: Arc<Mutex<ResponseHandler>>) {
-        handler.lock().await.abort();
+    pub async fn stop_handling_request(handler: Arc<RwLock<ResponseHandler>>) {
+        handler.write().await.abort();
     }
 
 }

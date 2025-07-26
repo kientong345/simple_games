@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use crate::player_manager;
 
 pub struct PlayerTracker {
-    player_manager: Arc<Mutex<player_manager::PlayerContainer>>,
+    player_manager: Arc<RwLock<player_manager::PlayerContainer>>,
 }
 
 impl PlayerTracker {
-    pub fn new(player_manager: Arc<Mutex<player_manager::PlayerContainer>>) -> Self {
+    pub fn new(player_manager: Arc<RwLock<player_manager::PlayerContainer>>) -> Self {
         Self {
             player_manager,
         }
