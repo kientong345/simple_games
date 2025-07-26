@@ -2,15 +2,30 @@ use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use tokio::{sync::RwLock, task::JoinHandle};
-use crate::caro_protocol;
+use crate::{caro_protocol, input_from_user::command_parser::ToUserCommand};
 use caro_console;
 
+pub mod command_parser;
+
 #[derive(Debug, Clone, Copy)]
-pub enum UserCommand {
+pub enum GeneralCommand {
+    ExitApplication,
+    Invalid,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum LoggedCommand {
     RequestNewRoom(caro_protocol::GameRule),
     JoinRoom(caro_protocol::RoomId),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum InRoomCommand {
     LeaveRoom,
-    ExitApplication,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum InGameCommand {
     Move(caro_protocol::Coordinate),
     Up,
     Down,
@@ -19,56 +34,15 @@ pub enum UserCommand {
     Undo,
     Redo,
     SwitchInputMode,
-    Invalid,
+    LeaveRoom,
 }
 
-pub trait ToUserCommand {
-    fn to_user_command(self) -> UserCommand;
-}
-
-impl ToUserCommand for caro_console::input::InputType {
-    fn to_user_command(self) -> UserCommand {
-        match self {
-            caro_console::input::InputType::Text(line) => {
-                let words: Vec<String>
-                = line.to_string()
-                    .trim()
-                    .split_whitespace()
-                    .map(|s| s.to_string())
-                    .collect();
-                match &*words[0] {
-                    "mkroom" => {
-                        match &*words[1] {
-                            "3" => UserCommand::RequestNewRoom(caro_protocol::GameRule::TicTacToe),
-                            "4" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FourBlockOne),
-                            "5" => UserCommand::RequestNewRoom(caro_protocol::GameRule::FiveBlockTwo),
-                            _ => UserCommand::Invalid,
-                        }
-                    },
-                    "cdroom" => {
-                        let rid = words[1].parse().unwrap();
-                        UserCommand::JoinRoom(rid)
-                    },
-                    "move" => {
-                        let latitude = words[1].parse().unwrap();
-                        let longtitude = words[2].parse().unwrap();
-                        UserCommand::Move((latitude, longtitude))
-                    },
-                    _ => UserCommand::Invalid,
-                }
-            },
-            caro_console::input::InputType::Key(key) => {
-                match key {
-                    caro_console::input::KeyType::Up => UserCommand::Up,
-                    caro_console::input::KeyType::Down => UserCommand::Down,
-                    caro_console::input::KeyType::Left => UserCommand::Left,
-                    caro_console::input::KeyType::Right => UserCommand::Right,
-                    caro_console::input::KeyType::Esc => UserCommand::SwitchInputMode,
-                    caro_console::input::KeyType::Invalid => UserCommand::Invalid,
-                }
-            },
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+pub enum UserCommand {
+    General(GeneralCommand),
+    Logged(LoggedCommand),
+    InRoom(InRoomCommand),
+    InGame(InGameCommand),
 }
 
 pub type HandleAction = Arc<tokio::sync::RwLock<dyn FnMut(UserCommand) -> BoxFuture<'static, ()> + Send + Sync + 'static>>;

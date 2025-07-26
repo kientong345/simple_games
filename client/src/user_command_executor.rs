@@ -23,43 +23,37 @@ impl CommandExecutor {
     }
 
     pub async fn execute_command(&mut self, command: input_from_user::UserCommand) {
-        // global request (regardless of owner's state)
-        self.execute_general_command(command).await;
-
         let current_state = self.global_state.read().await.get_player_state();
-        match current_state {
-            caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Connected) => {
+        match command {
+            input_from_user::UserCommand::General(command) => {
+                self.execute_general_command(command).await;
+            },
+            input_from_user::UserCommand::Logged(command) => {
                 self.execute_logged_command(command).await;
             },
-            caro_protocol::PlayerState::InRoom(caro_protocol::ConnectState::Connected) => {
+            input_from_user::UserCommand::InRoom(command) => {
                 self.execute_inroom_command(command).await;
             },
-            caro_protocol::PlayerState::InGame(caro_protocol::ConnectState::Connected) => {
+            input_from_user::UserCommand::InGame(command) => {
                 self.execute_ingame_command(command).await;
             },
-            _ => {
-                // do not process other commands
-            }
         }
     }
 
-    async fn execute_general_command(&mut self, command: input_from_user::UserCommand) {
+    async fn execute_general_command(&mut self, command: input_from_user::GeneralCommand) {
         match command {
-            input_from_user::UserCommand::ExitApplication => {
+            input_from_user::GeneralCommand::ExitApplication => {
 
             },
-            input_from_user::UserCommand::Invalid => {
+            input_from_user::GeneralCommand::Invalid => {
 
             },
-            _ => {
-                // do not process other commands
-            }
         }
     }
 
-    async fn execute_logged_command(&mut self, command: input_from_user::UserCommand) {
+    async fn execute_logged_command(&mut self, command: input_from_user::LoggedCommand) {
         match command {
-            input_from_user::UserCommand::RequestNewRoom(game_rule) => {
+            input_from_user::LoggedCommand::RequestNewRoom(game_rule) => {
                 match game_rule {
                     caro_protocol::GameRule::TicTacToe => {
                         let code = caro_protocol::PlayerCode::RequestRoomAsPlayer1(caro_protocol::GameRule::TicTacToe);
@@ -81,64 +75,55 @@ impl CommandExecutor {
                     },
                 }
             },
-            input_from_user::UserCommand::JoinRoom(rid) => {
+            input_from_user::LoggedCommand::JoinRoom(rid) => {
                 let code = caro_protocol::PlayerCode::JoinRoom(rid);
                 let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                 // println!("send: {:?}", new_packet);
                 self.requester.write().await.send_request(new_packet).await;
             },
-            input_from_user::UserCommand::LeaveRoom => {
-
-            },
-            _ => {
-                // do not process other commands
-            }
         }
     }
 
-    async fn execute_inroom_command(&mut self, command: input_from_user::UserCommand) {
+    async fn execute_inroom_command(&mut self, command: input_from_user::InRoomCommand) {
         match command {
-            input_from_user::UserCommand::LeaveRoom => {
+            input_from_user::InRoomCommand::LeaveRoom => {
 
             },
-            _ => {
-                // do not process other commands
-            }
         }
     }
 
-    async fn execute_ingame_command(&mut self, command: input_from_user::UserCommand) {
+    async fn execute_ingame_command(&mut self, command: input_from_user::InGameCommand) {
         match command {
-            input_from_user::UserCommand::Move(coor) => {
+            input_from_user::InGameCommand::Move(coor) => {
                 let coor = (coor.0, coor.1);
                 let code = caro_protocol::PlayerCode::PlayerMove(coor);
                 let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
                 // println!("send: {:?}", new_packet);
                 self.requester.write().await.send_request(new_packet).await;
             },
-            input_from_user::UserCommand::Up => {
+            input_from_user::InGameCommand::Up => {
                 
             },
-            input_from_user::UserCommand::Down => {
+            input_from_user::InGameCommand::Down => {
                 
             },
-            input_from_user::UserCommand::Left => {
+            input_from_user::InGameCommand::Left => {
                 
             },
-            input_from_user::UserCommand::Right => {
+            input_from_user::InGameCommand::Right => {
                 
             },
-            input_from_user::UserCommand::Redo => {
+            input_from_user::InGameCommand::Redo => {
 
             }
-            input_from_user::UserCommand::Undo => {
+            input_from_user::InGameCommand::Undo => {
 
             },
-            input_from_user::UserCommand::SwitchInputMode => {
+            input_from_user::InGameCommand::SwitchInputMode => {
 
             },
-            _ => {
-                // do not process other commands
+            input_from_user::InGameCommand::LeaveRoom => {
+
             }
         }
     }
