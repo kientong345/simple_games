@@ -14,7 +14,7 @@ const SCREEN_WIDTH: usize = 10;
 const SCREEN_HEIGHT: usize = 10;
 
 pub struct ScreenManager {
-    global_state: Arc<RwLock<global_state::GolbalState>>,
+    global_state: Arc<RwLock<global_state::GlobalState>>,
 
     menu_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
     room_entities_vec: Vec<Box<dyn screen_entity::ScreenEntity>>,
@@ -24,7 +24,7 @@ pub struct ScreenManager {
 }
 
 impl ScreenManager {
-    pub fn new(global_state: Arc<RwLock<global_state::GolbalState>>) -> Self {
+    pub fn new(global_state: Arc<RwLock<global_state::GlobalState>>) -> Self {
         let menu_entities_vec = entities_factory::EntitiesFactory::get_screen_entities(entities_factory::ScreenType::Menu);
         let room_entities_vec = entities_factory::EntitiesFactory::get_screen_entities(entities_factory::ScreenType::InRoom);
         let game_entities_vec = entities_factory::EntitiesFactory::get_screen_entities(entities_factory::ScreenType::InGame);

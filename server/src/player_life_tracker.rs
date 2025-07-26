@@ -23,7 +23,7 @@ pub struct PlayerTracker {
 
 impl PlayerTracker {
     pub fn new(player_manager: Arc<RwLock<player_manager::PlayerContainer>>) -> Self {
-        let action_on_disconnect = make_disconnected_action!(|pid: caro_protocol::PlayerId| {
+        let action_on_disconnect = make_disconnected_action!(|_pid: caro_protocol::PlayerId| {
             let future = async move {
             };
             Box::pin(future) as BoxFuture<'static, ()>

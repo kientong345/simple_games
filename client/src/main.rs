@@ -3,9 +3,9 @@ use std::sync::Arc;
 use caro_client::{caro_protocol, client_endpoint::{self, Requester, ResponseGetter}, global_state, input_from_user, make_input_action, make_response_action, output_to_user, server_response_executor, user_command_executor};
 use tokio::sync::RwLock;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 3)]
 async fn main() {
-    let global_state = Arc::new(RwLock::new(global_state::GolbalState::new()));
+    let global_state = Arc::new(RwLock::new(global_state::GlobalState::new()));
 
     let (receiver, sender) = client_endpoint::connect_to(caro_protocol::SERVER_ADDRESS).await;
 

@@ -7,13 +7,13 @@ use tokio::sync::RwLock;
 use crate::{caro_protocol, client_endpoint, global_state, output_to_user};
 
 pub struct ResponseExecutor {
-    global_state: Arc<RwLock<global_state::GolbalState>>,
+    global_state: Arc<RwLock<global_state::GlobalState>>,
     screen_manager: Arc<RwLock<output_to_user::ScreenManager>>,
     requester: Arc<RwLock<client_endpoint::Requester>>,
 }
 
 impl ResponseExecutor {
-    pub fn new(global_state: Arc<RwLock<global_state::GolbalState>>,
+    pub fn new(global_state: Arc<RwLock<global_state::GlobalState>>,
                 screen_manager: Arc<RwLock<output_to_user::ScreenManager>>,
                 requester: Arc<RwLock<client_endpoint::Requester>>) -> Self {
         Self {

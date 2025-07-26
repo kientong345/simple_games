@@ -1,11 +1,11 @@
 use crate::caro_protocol;
 
-pub struct GolbalState {
+pub struct GlobalState {
     player_state: caro_protocol::PlayerState,
     current_rid: caro_protocol::RoomId,
 }
 
-impl GolbalState {
+impl GlobalState {
     pub fn new() -> Self {
         Self {
             player_state: caro_protocol::PlayerState::Logged(caro_protocol::ConnectState::Disconnected),
