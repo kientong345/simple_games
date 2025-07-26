@@ -19,6 +19,7 @@ macro_rules! make_disconnected_action {
 pub struct PlayerTracker {
     player_manager: Arc<RwLock<player_manager::PlayerContainer>>,
     action_on_disconnect: DisconnectedAction,
+    action_on_disconnect_timeout: DisconnectedAction,
 }
 
 impl PlayerTracker {
@@ -28,14 +29,24 @@ impl PlayerTracker {
             };
             Box::pin(future) as BoxFuture<'static, ()>
         });
+        let action_on_disconnect_timeout = make_disconnected_action!(|_pid: caro_protocol::PlayerId| {
+            let future = async move {
+            };
+            Box::pin(future) as BoxFuture<'static, ()>
+        });
         Self {
             player_manager,
             action_on_disconnect,
+            action_on_disconnect_timeout,
         }
     }
 
     pub fn set_action_on_disconnect(&mut self, action: DisconnectedAction) {
         self.action_on_disconnect = action;
+    }
+
+    pub fn set_action_on_disconnect_timeout(&mut self, action: DisconnectedAction) {
+        self.action_on_disconnect_timeout = action;
     }
 
     pub async fn tracking_player(target: Arc<RwLock<PlayerTracker>>) -> TrackingHandler {
@@ -46,7 +57,11 @@ impl PlayerTracker {
                 loop {
                     let pid = 0;
                     continue; // This is a placeholder for actual player tracking logic
+                    target.write().await.player_manager.write().await.set_connection_state(pid, caro_protocol::ConnectState::Disconnected);
                     tokio::spawn(target.read().await.action_on_disconnect.write().await(pid));
+                    // continue checking
+                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                    tokio::spawn(target.read().await.action_on_disconnect_timeout.write().await(pid));
                 }
             }
         )

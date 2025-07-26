@@ -38,6 +38,28 @@ impl Player {
         self.state
     }
 
+    fn set_connection_state(&mut self, state: caro_protocol::ConnectState) {
+        match self.state {
+            caro_protocol::PlayerState::Logged(_) => {
+                self.state = caro_protocol::PlayerState::Logged(state);
+            },
+            caro_protocol::PlayerState::InRoom(_) => {
+                self.state = caro_protocol::PlayerState::InRoom(state);
+            },
+            caro_protocol::PlayerState::InGame(_) => {
+                self.state = caro_protocol::PlayerState::InGame(state);
+            },
+        }
+    }
+
+    fn get_connection_state(&self) -> caro_protocol::ConnectState {
+        match self.state {
+            caro_protocol::PlayerState::Logged(conn_state) => conn_state,
+            caro_protocol::PlayerState::InRoom(conn_state) => conn_state,
+            caro_protocol::PlayerState::InGame(conn_state) => conn_state,
+        }
+    }
+
     async fn set_action_on_request(&mut self, action: server_endpoint::HandleAction) {
         self.request_getter.write().await.set_action_on_request(action);
     }
@@ -126,6 +148,16 @@ impl PlayerContainer {
 
     pub fn get_player_state(&self, pid: caro_protocol::PlayerId) -> Option<caro_protocol::PlayerState> {
         self.players_map.get(&pid).map(|p| p.get_state())
+    }
+
+    pub fn set_connection_state(&mut self, pid: caro_protocol::PlayerId, state: caro_protocol::ConnectState) {
+        if let Some(player) = self.players_map.get_mut(&pid) {
+            player.set_connection_state(state);
+        }
+    }
+
+    pub fn get_connection_state(&self, pid: caro_protocol::PlayerId) -> Option<caro_protocol::ConnectState> {
+        self.players_map.get(&pid).map(|p| p.get_connection_state())
     }
 
     pub async fn set_action_on_request(&mut self, pid: caro_protocol::PlayerId, action: server_endpoint::HandleAction) {

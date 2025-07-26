@@ -28,13 +28,22 @@ async fn main() {
                                                                                                                     game_manager.clone())));
 
     let player_tracker = Arc::new(RwLock::new(player_life_tracker::PlayerTracker::new(player_manager.clone())));
-    let executor_clone = command_executor.clone();
     player_tracker.write().await.set_action_on_disconnect(
+        make_disconnected_action!(move |pid: caro_protocol::PlayerId| {
+            let future = async move {
+                println!("Player {} disconnected", pid);
+            };
+            Box::pin(future) as futures::future::BoxFuture<'static, ()>
+        })
+    );
+
+    let executor_clone = command_executor.clone();
+    player_tracker.write().await.set_action_on_disconnect_timeout(
         make_disconnected_action!(move |pid: caro_protocol::PlayerId| {
             let command_executor = executor_clone.clone();
             let future = async move {
                 command_executor.write().await.clean_player_existence(pid).await;
-                println!("Player {} disconnected", pid);
+                println!("Player {} disconnected (timeout)", pid);
             };
             Box::pin(future) as futures::future::BoxFuture<'static, ()>
         })
