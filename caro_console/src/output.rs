@@ -133,3 +133,13 @@ pub fn draw(entity: &DrawableBox) {
         latitude += 1;
     }
 }
+
+pub fn show_prompt_sign() {
+    let mut stdout = io::stdout();
+    let _ = crossterm::execute!(stdout, crossterm::cursor::Show);
+}
+
+pub fn hide_prompt_sign() {
+    let mut stdout = io::stdout();
+    let _ = crossterm::execute!(stdout, crossterm::cursor::Hide);
+}

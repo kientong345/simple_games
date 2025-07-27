@@ -10,6 +10,7 @@ pub enum KeyType {
     Down,
     Left,
     Right,
+    Enter,
     Esc,
     Invalid,
 }
@@ -65,6 +66,7 @@ pub async fn get_user_input() -> InputType {
                             crossterm::event::KeyCode::Down => KeyType::Down,
                             crossterm::event::KeyCode::Left => KeyType::Left,
                             crossterm::event::KeyCode::Right => KeyType::Right,
+                            crossterm::event::KeyCode::Enter => KeyType::Enter,
                             crossterm::event::KeyCode::Esc => KeyType::Esc,
                             _ => KeyType::Invalid,
                         });

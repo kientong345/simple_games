@@ -114,20 +114,22 @@ impl screen_entity::ScreenEntity for CoordinateLayout {
 
 pub struct Cursor {
     entity: caro_console::output::DrawableBox,
-    coordinate: (usize, usize),
+    coordinate_pos: caro_console::caro_art_tools::BoardPosition,
+    caro_coordinate: (usize, usize),
     are_you: bool,
 }
 
 impl Cursor {
-    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), coordinate: (usize, usize), are_you: bool) -> Self {
-        let board_pos = caro_console::caro_art_tools::BoardPosition {
+    pub fn new(vertical_range: (usize, usize), horizontal_range: (usize, usize), caro_coordinate: (usize, usize), are_you: bool) -> Self {
+        let coordinate_pos = caro_console::caro_art_tools::BoardPosition {
             base: GAME_BOARD_BASE_POS,
             vertical_range,
             horizontal_range,
         };
         Self {
-            entity: caro_console::caro_art_tools::get_drawable_cursor(&board_pos, coordinate),
-            coordinate,
+            entity: caro_console::caro_art_tools::get_drawable_cursor(&coordinate_pos, caro_coordinate),
+            coordinate_pos,
+            caro_coordinate,
             are_you,
         }
     }
@@ -144,13 +146,14 @@ impl screen_entity::ScreenEntity for Cursor {
     }
 
     fn get_position(&self) -> (screen_entity::Latitude, screen_entity::Longtitude) {
-        let (latitude, longtitude) = self.coordinate;
+        let (latitude, longtitude) = self.caro_coordinate;
         (latitude as i64, longtitude as i64)
     }
 
     fn set_position(&mut self, latitude: screen_entity::Latitude, longtitude: screen_entity::Longtitude) {
-        self.coordinate.0 = latitude as usize;
-        self.coordinate.1 = longtitude as usize;
+        self.caro_coordinate.0 = latitude as usize;
+        self.caro_coordinate.1 = longtitude as usize;
+        self.entity = caro_console::caro_art_tools::get_drawable_cursor(&self.coordinate_pos, self.caro_coordinate);
     }
 }
 

@@ -60,10 +60,16 @@ impl ScreenManager {
                 caro_console::input::enable_prompt_mode_at(35, 63);
             }
         }
+        caro_console::output::show_prompt_sign();
     }
 
     pub fn disable_prompt_mode(&self) {
         caro_console::input::disable_prompt_mode();
+        caro_console::output::hide_prompt_sign();
+    }
+
+    pub fn is_prompt_mode(&self) -> bool {
+        caro_console::input::is_prompt_mode()
     }
 
     pub fn set_cursor_pos(&mut self, latitude: caro_protocol::Latitude, longtitude: caro_protocol::Longtitude) {
@@ -206,14 +212,16 @@ impl BoardManager {
     fn set_cursor_pos(&mut self, latitude: i64, longtitude: i64) {
         let clamped_latitude = latitude.clamp(0, LATITUDE_LIMIT as i64);
         let clamped_longtitude = longtitude.clamp(0, LONGTITUDE_LIMIT as i64);
-
+        let mut need_to_update_layout = false;
         let (mut new_vertical_start, mut new_vertical_end) = self.vertical_range;
         if clamped_latitude < new_vertical_start as i64 {
             new_vertical_start = clamped_latitude as usize;
             new_vertical_end = (clamped_latitude as usize + BOARD_HEIGHT - 1).min(LATITUDE_LIMIT);
+            need_to_update_layout = true;
         } else if clamped_latitude > new_vertical_end as i64 {
             new_vertical_end = clamped_latitude as usize;
             new_vertical_start = (clamped_latitude as usize - BOARD_HEIGHT + 1).max(0);
+            need_to_update_layout = true;
         }
         if self.vertical_range.0 != new_vertical_start || self.vertical_range.1 != new_vertical_end {
             self.vertical_range = (new_vertical_start, new_vertical_end);
@@ -223,15 +231,21 @@ impl BoardManager {
         if clamped_longtitude < new_horizontal_start as i64 {
             new_horizontal_start = clamped_longtitude as usize;
             new_horizontal_end = (clamped_longtitude as usize + BOARD_WIDTH - 1).min(LONGTITUDE_LIMIT);
+            need_to_update_layout = true;
         } else if clamped_longtitude > new_horizontal_end as i64 {
             new_horizontal_end = clamped_longtitude as usize;
             new_horizontal_start = (clamped_longtitude as usize - BOARD_WIDTH + 1).max(0);
+            need_to_update_layout = true;
         }
         if self.horizontal_range.0 != new_horizontal_start || self.horizontal_range.1 != new_horizontal_end {
             self.horizontal_range = (new_horizontal_start, new_horizontal_end);
         }
 
         self.player_cursor.set_position(clamped_latitude, clamped_longtitude);
+
+        if need_to_update_layout {
+            // self.update_move_set(self.player1_moves, self.player2_moves);
+        }
     }
 
     fn get_cursor_pos(&self) -> caro_protocol::Coordinate {

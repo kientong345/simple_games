@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{process::exit, sync::Arc};
 
 use futures::future::BoxFuture;
 use tokio::{sync::RwLock, task::JoinHandle};
@@ -31,6 +31,7 @@ pub enum InGameCommand {
     Down,
     Left,
     Right,
+    Enter,
     Undo,
     Redo,
     SwitchInputMode,
@@ -105,8 +106,12 @@ impl CommandGetter {
                 let target = target_clone.clone();
                 loop {
                     let input_line = target.write().await.input_reader.get_input().await;
+                    // if let caro_console::input::InputType::Key(_key_type) = input_line {
+                    //     exit(1);
+                    // }
                     let cmd = input_line.to_user_command();
-                    tokio::spawn(target.read().await.action.write().await(cmd));
+                    // tokio::spawn(target.read().await.action.write().await(cmd));
+                    target.read().await.action.write().await(cmd).await;
                 }
             }
         )

@@ -15,6 +15,9 @@ impl ToUserCommand for caro_console::input::InputType {
                     .map(|s| s.to_string())
                     .collect();
                 match &*words[0] {
+                    "switch" => {
+                        UserCommand::InGame(InGameCommand::SwitchInputMode)
+                    },
                     "mkroom" => {
                         match &*words[1] {
                             "3" => UserCommand::Logged(LoggedCommand::RequestNewRoom(caro_protocol::GameRule::TicTacToe)),
@@ -41,6 +44,7 @@ impl ToUserCommand for caro_console::input::InputType {
                     caro_console::input::KeyType::Down => UserCommand::InGame(InGameCommand::Down),
                     caro_console::input::KeyType::Left => UserCommand::InGame(InGameCommand::Left),
                     caro_console::input::KeyType::Right => UserCommand::InGame(InGameCommand::Right),
+                    caro_console::input::KeyType::Enter => UserCommand::InGame(InGameCommand::Enter),
                     caro_console::input::KeyType::Esc => UserCommand::InGame(InGameCommand::SwitchInputMode),
                     caro_console::input::KeyType::Invalid => UserCommand::General(GeneralCommand::Invalid),
                 }

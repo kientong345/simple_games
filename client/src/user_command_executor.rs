@@ -106,6 +106,7 @@ impl CommandExecutor {
     }
 
     async fn execute_ingame_command(&mut self, command: input_from_user::InGameCommand) {
+        let cursor_position = self.screen_manager.read().await.get_cursor_pos();
         match command {
             input_from_user::InGameCommand::Move(coor) => {
                 let coor = (coor.0, coor.1);
@@ -115,16 +116,30 @@ impl CommandExecutor {
                 self.requester.write().await.send_request(new_packet).await;
             },
             input_from_user::InGameCommand::Up => {
-                
+                let new_position = (cursor_position.0 - 1, cursor_position.1);
+                self.screen_manager.write().await.set_cursor_pos(new_position.0, new_position.1);
+                self.screen_manager.write().await.update_board_only().await;
             },
             input_from_user::InGameCommand::Down => {
-                
+                let new_position = (cursor_position.0 + 1, cursor_position.1);
+                self.screen_manager.write().await.set_cursor_pos(new_position.0, new_position.1);
+                self.screen_manager.write().await.update_board_only().await;
             },
             input_from_user::InGameCommand::Left => {
-                
+                let new_position = (cursor_position.0, cursor_position.1 - 1);
+                self.screen_manager.write().await.set_cursor_pos(new_position.0, new_position.1);
+                self.screen_manager.write().await.update_board_only().await;
             },
             input_from_user::InGameCommand::Right => {
-                
+                let new_position = (cursor_position.0, cursor_position.1 + 1);
+                self.screen_manager.write().await.set_cursor_pos(new_position.0, new_position.1);
+                self.screen_manager.write().await.update_board_only().await;
+            },
+            input_from_user::InGameCommand::Enter => {
+                let code = caro_protocol::PlayerCode::InGame(caro_protocol::InGameRequest::PlayerMove(cursor_position));
+                let new_packet = caro_protocol::MessagePacket::new_player_packet(code);
+                // println!("send: {:?}", new_packet);
+                self.requester.write().await.send_request(new_packet).await;
             },
             input_from_user::InGameCommand::Redo => {
 
@@ -133,7 +148,14 @@ impl CommandExecutor {
 
             },
             input_from_user::InGameCommand::SwitchInputMode => {
-
+                let is_prompt_mode = self.screen_manager.read().await.is_prompt_mode();
+                if is_prompt_mode {
+                    self.screen_manager.write().await.disable_prompt_mode();
+                    println!("disable prompt mode");
+                } else {
+                    self.screen_manager.write().await.enable_prompt_mode().await;
+                    println!("enable prompt mode");
+                }
             },
             input_from_user::InGameCommand::LeaveRoom => {
 
