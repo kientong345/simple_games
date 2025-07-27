@@ -170,10 +170,12 @@ struct BoardManager {
     coordinate_layout: Box<dyn screen_entity::ScreenEntity>,
     last_opp_move_cursor: Option<Box<dyn screen_entity::ScreenEntity>>,
     player_cursor: Box<dyn screen_entity::ScreenEntity>,
-    player1_moves: Box<dyn screen_entity::ScreenEntity>,
-    player2_moves: Box<dyn screen_entity::ScreenEntity>,
+    player1_moves_entities: Box<dyn screen_entity::ScreenEntity>,
+    player2_moves_entities: Box<dyn screen_entity::ScreenEntity>,
 
     player_order: caro_protocol::PlayerOrder,
+    player1_moves: Vec<(usize, usize)>,
+    player2_moves: Vec<(usize, usize)>,
 }
 
 impl BoardManager {
@@ -185,9 +187,9 @@ impl BoardManager {
             (vertical_range, horizontal_range));
         let player_cursor = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::Cursor
             (vertical_range, horizontal_range, (0, 0), true));
-        let player1_moves = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::XMoveSet
+        let player1_moves_entities = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::XMoveSet
             (vertical_range, horizontal_range, Vec::new(), false));
-        let player2_moves = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::OMoveSet
+        let player2_moves_entities = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::OMoveSet
             (vertical_range, horizontal_range, Vec::new(), false));
         Self {
             vertical_range,
@@ -196,10 +198,12 @@ impl BoardManager {
             coordinate_layout,
             last_opp_move_cursor: None,
             player_cursor,
-            player1_moves,
-            player2_moves,
+            player1_moves_entities,
+            player2_moves_entities,
 
             player_order: caro_protocol::PlayerOrder::Player1,
+            player1_moves: Vec::new(),
+            player2_moves: Vec::new(),
         }
     }
 
@@ -239,10 +243,15 @@ impl BoardManager {
             self.horizontal_range = (new_horizontal_start, new_horizontal_end);
         }
 
-        self.player_cursor.set_position(clamped_latitude, clamped_longtitude);
+        if latitude >= self.vertical_range.0 as i64 && latitude <= self.vertical_range.1 as i64 &&
+           longtitude >= self.horizontal_range.0 as i64 && longtitude <= self.horizontal_range.1 as i64 {
+            self.player_cursor.set_position(clamped_latitude as screen_entity::Latitude, clamped_longtitude as screen_entity::Longtitude);
+        }
 
         if need_to_update_layout {
-            // self.update_move_set(self.player1_moves, self.player2_moves);
+            self.coordinate_layout = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::CoordinateLayout
+                (self.vertical_range, self.horizontal_range));
+            self.update_move_set(self.player1_moves.clone(), self.player2_moves.clone());
         }
     }
 
@@ -252,6 +261,8 @@ impl BoardManager {
     }
 
     fn update_move_set(&mut self, player1_moves: Vec<(usize, usize)>, player2_moves: Vec<(usize, usize)>) {
+        self.player1_moves = player1_moves.clone();
+        self.player2_moves = player2_moves.clone();
         let is_player1 = match self.player_order {
             caro_protocol::PlayerOrder::Player1 => true,
             caro_protocol::PlayerOrder::Player2 => false,
@@ -262,12 +273,17 @@ impl BoardManager {
             &player1_moves.last()
         };
         if let Some(opp_move) = last_opp_move {
-            self.last_opp_move_cursor = Some(entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::Cursor
-                (self.vertical_range, self.horizontal_range, (opp_move.0, opp_move.1), false)));
+            if opp_move.0 >= self.vertical_range.0 && opp_move.0 <= self.vertical_range.1 &&
+               opp_move.1 >= self.horizontal_range.0 && opp_move.1 <= self.horizontal_range.1 {
+                self.last_opp_move_cursor = Some(entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::Cursor
+                    (self.vertical_range, self.horizontal_range, (opp_move.0, opp_move.1), false)));
+            } else {
+                self.last_opp_move_cursor = None;
+            }
         }
-        self.player1_moves = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::XMoveSet
+        self.player1_moves_entities = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::XMoveSet
             (self.vertical_range, self.horizontal_range, player1_moves, is_player1));
-        self.player2_moves = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::OMoveSet
+        self.player2_moves_entities = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::OMoveSet
             (self.vertical_range, self.horizontal_range, player2_moves, !is_player1));
     }
 
@@ -281,7 +297,7 @@ impl BoardManager {
         // layer 3
         self.player_cursor.display();
         // layer 4
-        self.player1_moves.display();
-        self.player2_moves.display();
+        self.player1_moves_entities.display();
+        self.player2_moves_entities.display();
     }
 }

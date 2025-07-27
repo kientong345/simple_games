@@ -151,10 +151,8 @@ impl CommandExecutor {
                 let is_prompt_mode = self.screen_manager.read().await.is_prompt_mode();
                 if is_prompt_mode {
                     self.screen_manager.write().await.disable_prompt_mode();
-                    println!("disable prompt mode");
                 } else {
                     self.screen_manager.write().await.enable_prompt_mode().await;
-                    println!("enable prompt mode");
                 }
             },
             input_from_user::InGameCommand::LeaveRoom => {
