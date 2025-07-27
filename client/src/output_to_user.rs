@@ -10,9 +10,6 @@ pub mod menu_entities;
 pub mod room_entities;
 pub mod game_entities;
 
-const SCREEN_WIDTH: usize = 10;
-const SCREEN_HEIGHT: usize = 10;
-
 pub struct ScreenManager {
     global_state: Arc<RwLock<global_state::GlobalState>>,
 
@@ -159,8 +156,8 @@ impl ScreenManager {
 
 pub const BOARD_HEIGHT: usize = 15;
 pub const BOARD_WIDTH: usize = 25;
-pub const LATITUDE_LIMIT: usize = 1024;
-pub const LONGTITUDE_LIMIT: usize = 1024;
+pub const LATITUDE_LIMIT: usize = 1023;
+pub const LONGTITUDE_LIMIT: usize = 1023;
 struct BoardManager {
     vertical_range: (usize, usize),
     horizontal_range: (usize, usize),
@@ -241,12 +238,13 @@ impl BoardManager {
             need_to_update_layout = true;
         }
 
+        self.player_cursor = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::Cursor
+            (self.vertical_range, self.horizontal_range, (clamped_latitude as usize, clamped_longtitude as usize), true));
+
         if need_to_update_layout {
             self.coordinate_layout = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::CoordinateLayout
                 (self.vertical_range, self.horizontal_range));
             self.update_move_set(self.player1_moves.clone(), self.player2_moves.clone());
-        } else { // player cursor only update if the layout is not changed
-            self.player_cursor.set_position(clamped_latitude as screen_entity::Latitude, clamped_longtitude as screen_entity::Longtitude);
         }
     }
 
