@@ -219,39 +219,34 @@ impl BoardManager {
         if clamped_latitude < new_vertical_start as i64 {
             new_vertical_start = clamped_latitude as usize;
             new_vertical_end = (clamped_latitude as usize + BOARD_HEIGHT - 1).min(LATITUDE_LIMIT);
-            need_to_update_layout = true;
         } else if clamped_latitude > new_vertical_end as i64 {
             new_vertical_end = clamped_latitude as usize;
             new_vertical_start = (clamped_latitude as usize - BOARD_HEIGHT + 1).max(0);
-            need_to_update_layout = true;
         }
         if self.vertical_range.0 != new_vertical_start || self.vertical_range.1 != new_vertical_end {
             self.vertical_range = (new_vertical_start, new_vertical_end);
+            need_to_update_layout = true;
         }
 
         let (mut new_horizontal_start, mut new_horizontal_end) = self.horizontal_range;
         if clamped_longtitude < new_horizontal_start as i64 {
             new_horizontal_start = clamped_longtitude as usize;
             new_horizontal_end = (clamped_longtitude as usize + BOARD_WIDTH - 1).min(LONGTITUDE_LIMIT);
-            need_to_update_layout = true;
         } else if clamped_longtitude > new_horizontal_end as i64 {
             new_horizontal_end = clamped_longtitude as usize;
             new_horizontal_start = (clamped_longtitude as usize - BOARD_WIDTH + 1).max(0);
-            need_to_update_layout = true;
         }
         if self.horizontal_range.0 != new_horizontal_start || self.horizontal_range.1 != new_horizontal_end {
             self.horizontal_range = (new_horizontal_start, new_horizontal_end);
-        }
-
-        if latitude >= self.vertical_range.0 as i64 && latitude <= self.vertical_range.1 as i64 &&
-           longtitude >= self.horizontal_range.0 as i64 && longtitude <= self.horizontal_range.1 as i64 {
-            self.player_cursor.set_position(clamped_latitude as screen_entity::Latitude, clamped_longtitude as screen_entity::Longtitude);
+            need_to_update_layout = true;
         }
 
         if need_to_update_layout {
             self.coordinate_layout = entities_factory::EntitiesFactory::get_board_entity(entities_factory::BoardEntityType::CoordinateLayout
                 (self.vertical_range, self.horizontal_range));
             self.update_move_set(self.player1_moves.clone(), self.player2_moves.clone());
+        } else { // player cursor only update if the layout is not changed
+            self.player_cursor.set_position(clamped_latitude as screen_entity::Latitude, clamped_longtitude as screen_entity::Longtitude);
         }
     }
 
