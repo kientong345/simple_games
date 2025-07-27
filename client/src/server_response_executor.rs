@@ -50,7 +50,7 @@ impl ResponseExecutor {
     async fn execute_general_response(&mut self, code: caro_protocol::GeneralResponse) {
         match code {
             caro_protocol::GeneralResponse::State(your_state) => {
-
+                self.global_state.write().await.set_player_state(your_state);
             },
             caro_protocol::GeneralResponse::AreYouAlive => {
                 let code = caro_protocol::PlayerCode::General(caro_protocol::GeneralRequest::IAmAlive);
@@ -98,10 +98,10 @@ impl ResponseExecutor {
                 }
             },
             caro_protocol::LoggedResponse::FailedToCreateRoom => {
-
+                self.screen_manager.write().await.log("Failed to create room".to_string()).await;
             },
             caro_protocol::LoggedResponse::FailedToJoinRoom(rid) => {
-
+                self.screen_manager.write().await.log(format!("Failed to join room: {}", rid)).await;
             },
         }
     }
@@ -130,10 +130,10 @@ impl ResponseExecutor {
     async fn execute_ingame_response(&mut self, code: caro_protocol::InGameResponse) {
         match code {
             caro_protocol::InGameResponse::MoveSuccess => {
-
+                self.screen_manager.write().await.log("Move Successful".to_string()).await;
             },
             caro_protocol::InGameResponse::MoveUnsuccess => {
-
+                self.screen_manager.write().await.log("Move Unsuccessful".to_string()).await;
             },
             caro_protocol::InGameResponse::Context(game_context) => {
                 // screen_manager::print_caro_context(game_context);

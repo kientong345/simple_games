@@ -161,8 +161,6 @@ pub const LONGTITUDE_LIMIT: usize = 1023;
 struct BoardManager {
     vertical_range: (usize, usize),
     horizontal_range: (usize, usize),
-    // cursor_pos: (Latitude, Longtitude),
-    // last_opp_move: (Latitude, Longtitude),
 
     coordinate_layout: Box<dyn screen_entity::ScreenEntity>,
     last_opp_move_cursor: Option<Box<dyn screen_entity::ScreenEntity>>,
