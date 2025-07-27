@@ -60,12 +60,10 @@ impl ScreenManager {
                 caro_console::input::enable_prompt_mode_at(35, 63);
             }
         }
-        caro_console::output::show_prompt_sign();
     }
 
     pub fn disable_prompt_mode(&self) {
         caro_console::input::disable_prompt_mode();
-        caro_console::output::hide_prompt_sign();
     }
 
     pub fn is_prompt_mode(&self) -> bool {
